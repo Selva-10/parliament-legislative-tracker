@@ -1,0 +1,432 @@
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block title %}Analytics - Parliament Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Stats Cards */
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+        position: relative;
+    }
+    .stats-card:hover { transform: translateY(-5px); }
+    .stats-card.ls { background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); }
+    .stats-card.rs { background: linear-gradient(135deg, #1cc88a 0%, #169b6b 100%); }
+    .stats-card.both { background: linear-gradient(135deg, #f6c23e 0%, #dda20a 100%); }
+    .stats-number { font-size: 2.8rem; font-weight: bold; line-height: 1.2; }
+    .stats-label { font-size: 1.1rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; }
+    .stats-icon { font-size: 3rem; opacity: 0.3; position: absolute; right: 20px; top: 20px; }
+
+    /* Chart Containers */
+    .chart-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px 0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        height: 350px;
+    }
+    .chart-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #333;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 10px;
+    }
+
+    /* Tables */
+    .table-analytics {
+        font-size: 0.95rem;
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .table-analytics th {
+        background: #f8f9fc;
+        font-weight: 600;
+        padding: 12px 8px;
+        text-align: left;
+        border-bottom: 2px solid #e3e6f0;
+    }
+    .table-analytics td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #e3e6f0;
+        vertical-align: middle;
+    }
+    .table-analytics tr:hover { background-color: #f8f9fc; }
+
+    /* Progress Bar */
+    .progress {
+        height: 20px;
+        border-radius: 10px;
+        background-color: #eaecf4;
+        overflow: hidden;
+        min-width: 100px;
+    }
+    .progress-bar {
+        border-radius: 10px;
+        background-color: #28a745;
+        color: white;
+        font-size: 0.8rem;
+        line-height: 20px;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    /* Column widths for success tables */
+    .ministry-table th:nth-child(1) { width: 40%; }
+    .ministry-table th:nth-child(2) { width: 15%; }
+    .ministry-table th:nth-child(3) { width: 15%; }
+    .ministry-table th:nth-child(4) { width: 30%; }
+
+    .party-table th:nth-child(1) { width: 40%; }
+    .party-table th:nth-child(2) { width: 15%; }
+    .party-table th:nth-child(3) { width: 15%; }
+    .party-table th:nth-child(4) { width: 30%; }
+
+    /* Monthly table column widths */
+    .monthly-table th:nth-child(1) { width: 12%; }
+    .monthly-table th:nth-child(2) { width: 8%; }
+    .monthly-table th:nth-child(3) { width: 8%; }
+    .monthly-table th:nth-child(4) { width: 8%; }
+    .monthly-table th:nth-child(5) { width: 6%; }
+    .monthly-table th:nth-child(6) { width: 6%; }
+    .monthly-table th:nth-child(7) { width: 6%; }
+    .monthly-table th:nth-child(8) { width: 46%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4">Analytics Dashboard</h1>
+
+    <!-- Stats Cards -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card">
+                <div class="stats-number">{{ total_bills }}</div>
+                <div class="stats-label">Total Bills</div>
+                <i class="fas fa-file-alt stats-icon"></i>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card ls">
+                <div class="stats-number">{{ ls_count }}</div>
+                <div class="stats-label">Lok Sabha</div>
+                <i class="fas fa-landmark stats-icon"></i>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card rs">
+                <div class="stats-number">{{ rs_count }}</div>
+                <div class="stats-label">Rajya Sabha</div>
+                <i class="fas fa-university stats-icon"></i>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card both">
+                <div class="stats-number">{{ both_count }}</div>
+                <div class="stats-label">Both Houses</div>
+                <i class="fas fa-balance-scale stats-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- First row of charts -->
+    <div class="row">
+        <div class="col-xl-6">
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-chart-pie me-2 text-primary"></i>Bills by Status
+                </div>
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-chart-bar me-2 text-success"></i>Bills by House
+                </div>
+                <canvas id="houseChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Second row: ministry and party distribution -->
+    <div class="row">
+        <div class="col-xl-6">
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-building me-2 text-warning"></i>Top Ministries by Bill Count
+                </div>
+                <canvas id="ministryChart"></canvas>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="chart-container">
+                <div class="chart-title">
+                    <i class="fas fa-users me-2 text-info"></i>Bills by Party
+                </div>
+                <canvas id="partyChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success rate tables (side by side) -->
+    <div class="row">
+        <div class="col-xl-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Ministry Success Rate</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-analytics ministry-table">
+                            <thead>
+                                <tr>
+                                    <th>Ministry</th>
+                                    <th>Total</th>
+                                    <th>Passed</th>
+                                    <th>Success Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ministry-success-table">
+                                <!-- Filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-6">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Party Success Rate</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-analytics party-table">
+                            <thead>
+                                <tr>
+                                    <th>Party</th>
+                                    <th>Total</th>
+                                    <th>Passed</th>
+                                    <th>Success Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="party-success-table">
+                                <!-- Filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly detailed table -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-table me-2"></i>Monthly Bill Statistics
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-analytics monthly-table">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Total</th>
+                                    <th>Lok Sabha</th>
+                                    <th>Rajya Sabha</th>
+                                    <th>Passed</th>
+                                    <th>Pending</th>
+                                    <th>Rejected</th>
+                                    <th>Success Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthly-table">
+                                <!-- Filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Data from Django
+    const statusData = {{ status_counts|safe }};
+    const houseData = {{ house_counts|safe }};
+    const ministryData = {{ ministry_counts|safe }};
+    const partyData = {{ party_counts|safe }};
+    const ministrySuccess = {{ ministry_success|safe }};
+    const partySuccess = {{ party_success|safe }};
+    const monthlyData = {{ monthly_data|safe }};
+
+    // Status Chart
+    new Chart(document.getElementById('statusChart'), {
+        type: 'doughnut',
+        data: {
+            labels: statusData.map(item => item.status || 'Unknown'),
+            datasets: [{
+                data: statusData.map(item => item.count),
+                backgroundColor: ['#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+
+    // House Chart
+    new Chart(document.getElementById('houseChart'), {
+        type: 'bar',
+        data: {
+            labels: houseData.map(item => item.house),
+            datasets: [{
+                label: 'Number of Bills',
+                data: houseData.map(item => item.count),
+                backgroundColor: ['#4e73df', '#1cc88a', '#f6c23e'],
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Ministry Chart
+    new Chart(document.getElementById('ministryChart'), {
+        type: 'bar',
+        data: {
+            labels: ministryData.map(item => item.ministry.length > 20 ? item.ministry.substring(0,20)+'...' : item.ministry),
+            datasets: [{
+                label: 'Bills',
+                data: ministryData.map(item => item.count),
+                backgroundColor: '#fd7e14',
+                borderRadius: 5
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Party Chart
+    new Chart(document.getElementById('partyChart'), {
+        type: 'bar',
+        data: {
+            labels: partyData.map(item => item.introduced_by_party),
+            datasets: [{
+                label: 'Bills',
+                data: partyData.map(item => item.count),
+                backgroundColor: '#20c997',
+                borderRadius: 5
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Ministry success table
+    const ministryTable = document.getElementById('ministry-success-table');
+    if (ministrySuccess.length) {
+        ministryTable.innerHTML = ministrySuccess.map(m => `
+            <tr>
+                <td>${m.ministry}</td>
+                <td>${m.total}</td>
+                <td>${m.passed}</td>
+                <td>
+                    <div class="progress">
+                        <div class="progress-bar" style="width: ${m.success_rate}%">
+                            ${m.success_rate}%
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } else {
+        ministryTable.innerHTML = '<tr><td colspan="4" class="text-center">No data</td></tr>';
+    }
+
+    // Party success table
+    const partyTable = document.getElementById('party-success-table');
+    if (partySuccess.length) {
+        partyTable.innerHTML = partySuccess.map(p => `
+            <tr>
+                <td>${p.party}</td>
+                <td>${p.total}</td>
+                <td>${p.passed}</td>
+                <td>
+                    <div class="progress">
+                        <div class="progress-bar" style="width: ${p.success_rate}%">
+                            ${p.success_rate}%
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    } else {
+        partyTable.innerHTML = '<tr><td colspan="4" class="text-center">No data</td></tr>';
+    }
+
+    // Monthly table
+    const monthlyTable = document.getElementById('monthly-table');
+    if (monthlyData.length) {
+        monthlyTable.innerHTML = monthlyData.map(m => {
+            const successRate = m.total > 0 ? ((m.passed / m.total) * 100).toFixed(1) : 0;
+            return `
+                <tr>
+                    <td><strong>${m.month}</strong></td>
+                    <td>${m.total}</td>
+                    <td>${m.ls_count}</td>
+                    <td>${m.rs_count}</td>
+                    <td>${m.passed}</td>
+                    <td>${m.pending}</td>
+                    <td>${m.rejected}</td>
+                    <td>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: ${successRate}%">
+                                ${successRate}%
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } else {
+        monthlyTable.innerHTML = '<tr><td colspan="8" class="text-center">No data</td></tr>';
+    }
+});
+</script>
+{% endblock %}

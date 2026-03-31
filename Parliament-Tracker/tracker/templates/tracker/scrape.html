@@ -1,0 +1,64 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Scrape Bills - Parliament Tracker{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="h3 mb-4">Manual Scraping</h1>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Trigger Scraping</h5>
+                </div>
+                <div class="card-body">
+                    <form id="scrape-form">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="source" class="form-label">Select Source</label>
+                            <select class="form-control" id="source" name="source">
+                                {% for source in sources %}
+                                <option value="{{ source.id }}">{{ source.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-sync-alt"></i> Start Scraping
+                        </button>
+                    </form>
+                    
+                    <div id="result" class="mt-3" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('scrape-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const resultDiv = document.getElementById('result');
+    
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<div class="alert alert-info">Scraping in progress...</div>';
+    
+    fetch('/scrape/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        resultDiv.innerHTML = `<div class="alert alert-success">${data.message}</div>`;
+    })
+    .catch(error => {
+        resultDiv.innerHTML = `<div class="alert alert-danger">Error: ${error}</div>`;
+    });
+});
+</script>
+{% endblock %}

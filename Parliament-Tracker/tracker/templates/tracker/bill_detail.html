@@ -1,0 +1,68 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}{{ bill.title }} - Parliament Tracker{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'bill_list' %}">Bills</a></li>
+            <li class="breadcrumb-item active">{{ bill.bill_id }}</li>
+        </ol>
+    </nav>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h2 class="h4 mb-0">{{ bill.title }}</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <table class="table table-bordered">
+                        <tr><th>Bill ID</th><td>{{ bill.bill_id }}</td></tr>
+                        <tr><th>Bill Number</th><td>{{ bill.bill_number|default:"-" }}</td></tr>
+                        <tr><th>House</th><td>{{ bill.get_house_display|default:bill.house }}</td></tr>
+                        <tr><th>Status</th><td><span class="badge bg-{{ bill.status_color }}">{{ bill.get_status_display|default:bill.status }}</span></td></tr>
+                        <tr><th>Introduction Date</th><td>{{ bill.introduction_date|date:"d M Y"|default:"-" }}</td></tr>
+                        {% if bill.passed_date %}
+                        <tr><th>Passed Date</th><td>{{ bill.passed_date|date:"d M Y" }}</td></tr>
+                        {% endif %}
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-bordered">
+                        <tr><th>Introduced By</th><td>{{ bill.introduced_by|default:"-" }} ({{ bill.introduced_by_party|default:"-" }})</td></tr>
+                        <tr><th>Ministry</th><td>{{ bill.ministry|default:"-" }}</td></tr>
+                        <tr><th>Source</th><td>{{ bill.source|default:"-" }}</td></tr>
+                        <tr><th>Last Updated</th><td>{{ bill.last_updated|date:"d M Y H:i"|default:"-" }}</td></tr>
+                    </table>
+                </div>
+            </div>
+            {% if bill.description %}
+            <div class="mt-4">
+                <h5>Description</h5>
+                <p>{{ bill.description|linebreaks }}</p>
+            </div>
+            {% endif %}
+            {% if bill.objective %}
+            <div class="mt-4">
+                <h5>Objective</h5>
+                <p>{{ bill.objective|linebreaks }}</p>
+            </div>
+            {% endif %}
+            <div class="mt-4">
+                {% if bill.prs_link %}
+                <a href="{{ bill.prs_link }}" target="_blank" class="btn btn-outline-primary">PRS India</a>
+                {% endif %}
+                {% if bill.loksabha_link %}
+                <a href="{{ bill.loksabha_link }}" target="_blank" class="btn btn-outline-primary">Lok Sabha</a>
+                {% endif %}
+                {% if bill.rajyasabha_link %}
+                <a href="{{ bill.rajyasabha_link }}" target="_blank" class="btn btn-outline-primary">Rajya Sabha</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,96 @@
+<!-- templates/tracker/calendar/event_detail.html -->
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block title %}{{ event.title }} - Parliament Tracker{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'legislative_calendar' %}">Calendar</a></li>
+            <li class="breadcrumb-item active">{{ event.title }}</li>
+        </ol>
+    </nav>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">{{ event.title }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5><i class="bi bi-calendar"></i> Date & Time</h5>
+                            <p>
+                                <strong>Start:</strong> {{ event.start_datetime|date:"F d, Y H:i" }}<br>
+                                <strong>End:</strong> {{ event.end_datetime|date:"F d, Y H:i" }}<br>
+                                <strong>Duration:</strong> {{ event.end_datetime|timeuntil:event.start_datetime }}
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5><i class="bi bi-tag"></i> Event Type</h5>
+                            <p>
+                                <span class="badge {% if event.event_type == 'sitting' %}bg-success{% elif event.event_type == 'debate' %}bg-primary{% elif event.event_type == 'voting' %}bg-warning{% else %}bg-purple{% endif %} p-2">
+                                    {{ event.get_event_type_display }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <h5><i class="bi bi-file-text"></i> Description</h5>
+                    <p>{{ event.description|linebreaks }}</p>
+                    
+                    {% if related_bills %}
+                    <h5 class="mt-4"><i class="bi bi-file-earmark-text"></i> Related Bills</h5>
+                    <div class="list-group">
+                        {% for bill in related_bills %}
+                        <a href="{% url 'bill_detail' bill.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ bill.bill_number }}</strong> - {{ bill.title|truncatechars:80 }}
+                                </div>
+                                <span class="badge bg-info">{{ bill.get_status_display }}</span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'calendar_day' year=event.start_datetime.year month=event.start_datetime.month day=event.start_datetime.day %}" class="btn btn-outline-primary">
+                        <i class="bi bi-calendar-day"></i> View on Calendar
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Same Day Events -->
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Other Events on this Day</h5>
+                </div>
+                <div class="card-body">
+                    {% for other in same_day_events %}
+                    <div class="mb-3">
+                        <a href="{% url 'calendar_event_detail' other.id %}" class="text-decoration-none">
+                            <div class="event-detail p-2 border rounded">
+                                <span class="badge {% if other.event_type == 'sitting' %}bg-success{% elif other.event_type == 'debate' %}bg-primary{% elif other.event_type == 'voting' %}bg-warning{% else %}bg-purple{% endif %}">
+                                    {{ other.get_event_type_display }}
+                                </span>
+                                <strong class="d-block mt-1">{{ other.title }}</strong>
+                                <small class="text-muted">{{ other.start_datetime|time:"H:i" }}</small>
+                            </div>
+                        </a>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted">No other events on this day.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block title %}{{ mla.name }} - MLA Details{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'mla_list' %}">MLAs</a></li>
+            <li class="breadcrumb-item active">{{ mla.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h3>{{ mla.name }}</h3>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered">
+                <tr>
+                    <th style="width: 200px;">State</th>
+                    <td>{{ mla.state.name }}</td>
+                </tr>
+                <tr>
+                    <th>Constituency</th>
+                    <td>{{ mla.constituency }}</td>
+                </tr>
+                <tr>
+                    <th>Party</th>
+                    <td>{{ mla.party.name }} ({{ mla.party.abbreviation }})</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

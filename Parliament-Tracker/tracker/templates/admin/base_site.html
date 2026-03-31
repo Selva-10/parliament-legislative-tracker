@@ -1,0 +1,60 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ title }} | Parliament Legislative Tracker Admin{% endblock %}
+
+{% block branding %}
+<h1 id="site-name">
+    <a href="{% url 'admin:index' %}">
+        <i class="fas fa-landmark"></i> Parliament Tracker Administration
+    </a>
+</h1>
+{% endblock %}
+
+{% block nav-global %}
+{% endblock %}
+
+{% block extrastyle %}
+<style>
+:root {
+    --primary: #1a5fb4;
+    --secondary: #2ec27e;
+}
+
+#header {
+    background: var(--primary);
+    color: white;
+}
+
+#branding h1 {
+    font-weight: 700;
+}
+
+.module h2, .module caption, .inline-group h2 {
+    background: var(--primary);
+}
+
+div.breadcrumbs {
+    background: var(--secondary);
+}
+
+.button, input[type=submit], input[type=button], .submit-row input, a.button {
+    background: var(--primary);
+}
+
+.button:hover, input[type=submit]:hover, input[type=button]:hover {
+    background: #0d4a9e;
+}
+
+.selector-chosen h2 {
+    background: var(--primary) !important;
+}
+
+.calendar td.selected a {
+    background: var(--primary) !important;
+}
+
+.calendar td a:hover, .timeline h3, .timeline h4 {
+    background: var(--secondary) !important;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,252 @@
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - Parliament Tracker{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4">Parliament Legislative Tracker Dashboard</h1>
+    
+    <!-- Stats Cards -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Bills</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_bills }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-file-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Passed Bills</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ passed_bills }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Pending Bills</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending_bills }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-hourglass-half fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Rajya Sabha Bills</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ rajyasabha_bills }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-university fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Bills with Name and ID -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Bills</h6>
+                    <a href="{% url 'bill_list' %}" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Bill ID</th>
+                                    <th>Bill Number</th>
+                                    <th>Title</th>
+                                    <th>House</th>
+                                    <th>Status</th>
+                                    <th>Introduced By</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bill in recent_bills %}
+                                <tr>
+                                    <td>
+                                        <a href="{% url 'bill_detail' bill.id %}">
+                                            <strong>{{ bill.bill_id }}</strong>
+                                        </a>
+                                    </td>
+                                    <td>{{ bill.bill_number|default:"-" }}</td>
+                                    <td>
+                                        <a href="{% url 'bill_detail' bill.id %}">
+                                            {{ bill.title|truncatechars:60 }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info text-white">
+                                            {{ bill.get_house_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if bill.status == 'PASSED' %}bg-success{% elif bill.status == 'PENDING' %}bg-warning{% else %}bg-danger{% endif %}">
+                                            {{ bill.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ bill.introduced_by|truncatechars:30 }}</td>
+                                    <td>{{ bill.introduction_date|date:"d M Y"|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">No bills found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+    <!-- MPs & MLAs Summary Cards -->
+<div class="row mt-4">
+    <div class="col-xl-6 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total MPs</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_mps }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-6 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Total MLAs</div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_mlas }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-user-tie fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent MPs and MLAs -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-primary">Recent MPs</h6>
+                <a href="{% url 'mp_list' %}" class="btn btn-sm btn-primary">View All</a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Party</th>
+                                <th>Constituency</th>
+                                <th>State</th>
+                                <th>House</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mp in recent_mps %}
+                            <tr>
+                                <td><a href="{% url 'mp_detail' mp.id %}">{{ mp.name }}</a></td>
+                                <td>{{ mp.party.name }}</td>
+                                <td>{{ mp.constituency }}</td>
+                                <td>{{ mp.state.name }}</td>
+                                <td>{{ mp.get_house_display }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center">No MPs found</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold text-success">Recent MLAs</h6>
+                <a href="{% url 'mla_list' %}" class="btn btn-sm btn-success">View All</a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Party</th>
+                                <th>Constituency</th>
+                                <th>State</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mla in recent_mlas %}
+                            <tr>
+                                <td><a href="{% url 'mla_detail' mla.id %}">{{ mla.name }}</a></td>
+                                <td>{{ mla.party.name }}</td>
+                                <td>{{ mla.constituency }}</td>
+                                <td>{{ mla.state.name }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center">No MLAs found</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

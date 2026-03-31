@@ -1,0 +1,42 @@
+
+{% extends 'tracker/base.html' %}
+
+{% block title %}Server Error - Parliament Legislative Tracker{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="display-1 text-danger mb-4">
+                <i class="fas fa-server"></i> 500
+            </div>
+            <h1 class="display-4 mb-4">Server Error</h1>
+            <p class="lead mb-5">
+                An unexpected error has occurred on the server. Our team has been notified 
+                and is working to fix the issue.
+            </p>
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Technical Details:</strong> 
+                {% if request.sentry.id %}
+                Error ID: <code>{{ request.sentry.id }}</code>
+                {% else %}
+                Please check the server logs for more information.
+                {% endif %}
+            </div>
+            <div class="row mt-5">
+                <div class="col-md-6 mb-3">
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg w-100">
+                        <i class="fas fa-home me-2"></i> Go to Dashboard
+                    </a>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <button onclick="location.reload()" class="btn btn-outline-primary btn-lg w-100">
+                        <i class="fas fa-redo me-2"></i> Try Again
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,463 @@
+<!-- templates/tracker/scraping.html -->
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block title %}Data Scraping - Parliament Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .stats-card .stats-number {
+        font-size: 2.5em;
+        font-weight: bold;
+    }
+    .stats-card .stats-label {
+        font-size: 0.9em;
+        opacity: 0.9;
+    }
+    .source-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    .source-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .source-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    .badge-active {
+        background: #28a745;
+        color: white;
+    }
+    .badge-inactive {
+        background: #dc3545;
+        color: white;
+    }
+    .source-type {
+        background: #e9ecef;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.8em;
+    }
+    .progress-sm {
+        height: 5px;
+    }
+    .log-entry {
+        background: #f8f9fa;
+        border-left: 4px solid #6c757d;
+        padding: 12px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+    }
+    .log-success {
+        border-left-color: #28a745;
+    }
+    .log-failed {
+        border-left-color: #dc3545;
+    }
+    .log-in-progress {
+        border-left-color: #ffc107;
+    }
+    .scraping-controls {
+        background: white;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .btn-scrape {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        font-weight: bold;
+        transition: transform 0.2s;
+    }
+    .btn-scrape:hover {
+        transform: scale(1.05);
+        color: white;
+    }
+    .loading-spinner {
+        display: none;
+        width: 20px;
+        height: 20px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-left: 10px;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">Data Scraping</h1>
+    
+    <!-- Stats Cards -->
+    <div class="row">
+        <div class="col-md-3">
+            <div class="stats-card text-center">
+                <div class="stats-number">{{ logs|length }}</div>
+                <div class="stats-label">Total Scraping Jobs</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card text-center" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                <div class="stats-number">{{ logs|dictsortreversed:"status"|dictsort:"status"|length }}</div>
+                <div class="stats-label">Successful Scrapes</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card text-center" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
+                <div class="stats-number">{{ logs|dictsortreversed:"records_processed"|dictsort:"records_processed"|length }}</div>
+                <div class="stats-label">Total Records</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card text-center" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                <div class="stats-number">{{ sources|length }}</div>
+                <div class="stats-label">Active Sources</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scraping Controls -->
+    <div class="scraping-controls">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h4>Start New Scraping Job</h4>
+                <p class="text-muted">Scraping collects data from parliamentary websites. This may take a few minutes.</p>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-scrape" onclick="startScraping()" id="scrapeBtn">
+                    <i class="bi bi-cloud-download"></i> Start Scraping
+                    <span class="loading-spinner" id="loadingSpinner"></span>
+                </button>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <select class="form-select" id="sourceSelect">
+                    <option value="all">All Sources</option>
+                    {% for source in sources %}
+                    <option value="{{ source.id }}">{{ source.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-info-circle"></i> 
+                    Estimated time: 2-5 minutes
+                </div>
+            </div>
+        </div>
+        <div id="scrapingResult" class="mt-3" style="display: none;"></div>
+    </div>
+    
+    <!-- Data Sources -->
+    <h3 class="mb-3">Data Sources</h3>
+    <div class="row">
+        {% for source in sources %}
+        <div class="col-md-6">
+            <div class="source-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5>{{ source.name }}</h5>
+                        <span class="source-type">{{ source.get_source_type_display }}</span>
+                    </div>
+                    <span class="source-badge {% if source.is_active %}badge-active{% else %}badge-inactive{% endif %}">
+                        {{ source.is_active|yesno:"Active,Inactive" }}
+                    </span>
+                </div>
+                
+                <div class="mt-3">
+                    <p class="mb-1">
+                        <i class="bi bi-link"></i> 
+                        <a href="{{ source.url }}" target="_blank">{{ source.url|truncatechars:40 }}</a>
+                    </p>
+                    <p class="mb-1">
+                        <i class="bi bi-calendar"></i> 
+                        Last Scraped: {{ source.last_scraped|date:"M d, Y H:i"|default:"Never" }}
+                    </p>
+                    <p class="mb-1">
+                        <i class="bi bi-database"></i> 
+                        Total Records: 
+                        {% with source.logs.all|dictsortreversed:"records_processed"|first as latest_log %}
+                            {{ latest_log.records_processed|default:"0" }}
+                        {% endwith %}
+                    </p>
+                </div>
+                
+                <div class="mt-3">
+                    <button class="btn btn-sm btn-outline-primary" onclick="scrapeSource('{{ source.id }}')">
+                        <i class="bi bi-play"></i> Scrape Now
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="viewSourceLogs('{{ source.id }}')">
+                        <i class="bi bi-list"></i> View Logs
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-warning">
+                No data sources configured. Please add sources in the admin panel.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Scraping Logs -->
+    <h3 class="mb-3 mt-4">Scraping Logs</h3>
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Source</th>
+                            <th>Started</th>
+                            <th>Completed</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                            <th>Records</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs %}
+                        <tr>
+                            <td>
+                                <strong>{{ log.source.name }}</strong>
+                            </td>
+                            <td>{{ log.started_at|date:"M d, H:i:s" }}</td>
+                            <td>{{ log.completed_at|date:"M d, H:i:s"|default:"In Progress" }}</td>
+                            <td>
+                                {% if log.completed_at %}
+                                    {{ log.completed_at|timeuntil:log.started_at }}
+                                {% else %}
+                                    Running...
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge {% if log.status == 'success' %}bg-success{% elif log.status == 'failed' %}bg-danger{% else %}bg-warning{% endif %}">
+                                    {{ log.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ log.records_processed }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-info" onclick="viewLogDetails('{{ log.id }}')">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                                {% if log.error_message %}
+                                <button class="btn btn-sm btn-outline-danger" onclick="viewError('{{ log.id }}')">
+                                    <i class="bi bi-exclamation-triangle"></i>
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                                <p class="mt-2">No scraping logs found</p>
+                                <p class="text-muted">Start your first scraping job to see logs here.</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Modal -->
+<div class="modal fade" id="errorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Error Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <pre id="errorMessage" style="white-space: pre-wrap;"></pre>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Log Details Modal -->
+<div class="modal fade" id="logModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Log Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="logDetails">
+                Loading...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function startScraping() {
+        const sourceId = document.getElementById('sourceSelect').value;
+        scrapeSource(sourceId);
+    }
+    
+    function scrapeSource(sourceId) {
+        // Show loading state
+        const btn = document.getElementById('scrapeBtn');
+        const spinner = document.getElementById('loadingSpinner');
+        const resultDiv = document.getElementById('scrapingResult');
+        
+        btn.disabled = true;
+        spinner.style.display = 'inline-block';
+        resultDiv.style.display = 'none';
+        
+        // Get CSRF token
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || getCookie('csrftoken');
+        
+        // Make AJAX request
+        fetch('', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrftoken
+            },
+            body: 'source_id=' + encodeURIComponent(sourceId)
+        })
+        .then(response => response.json())
+        .then(data => {
+            resultDiv.style.display = 'block';
+            
+            if (data.success) {
+                resultDiv.className = 'alert alert-success mt-3';
+                resultDiv.innerHTML = `
+                    <strong>Success!</strong> Scraped ${data.records || 0} records from ${data.source || 'source'}.
+                    <br><small>${data.stats ? JSON.stringify(data.stats) : ''}</small>
+                `;
+                // Reload page after 2 seconds to show updated data
+                setTimeout(() => location.reload(), 2000);
+            } else if (data.results) {
+                // Multiple sources result
+                let html = '<strong>Scraping Results:</strong><ul>';
+                data.results.forEach(r => {
+                    html += `<li>${r.source}: ${r.error ? 'Error - ' + r.error : 'Success - ' + r.records + ' records'}</li>`;
+                });
+                html += '</ul>';
+                resultDiv.className = 'alert alert-info mt-3';
+                resultDiv.innerHTML = html;
+                setTimeout(() => location.reload(), 3000);
+            } else {
+                resultDiv.className = 'alert alert-danger mt-3';
+                resultDiv.innerHTML = `<strong>Error:</strong> ${data.error || 'Unknown error occurred'}`;
+            }
+        })
+        .catch(error => {
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'alert alert-danger mt-3';
+            resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+        })
+        .finally(() => {
+            btn.disabled = false;
+            spinner.style.display = 'none';
+        });
+    }
+    
+    function viewSourceLogs(sourceId) {
+        // Filter logs by source and show in modal
+        const logModal = new bootstrap.Modal(document.getElementById('logModal'));
+        document.getElementById('logDetails').innerHTML = 'Loading logs for source...';
+        logModal.show();
+        
+        // You can implement this to show source-specific logs
+        setTimeout(() => {
+            document.getElementById('logDetails').innerHTML = `
+                <p>Logs for source ID: ${sourceId}</p>
+                <p>This feature will show all scraping logs for this source.</p>
+            `;
+        }, 500);
+    }
+    
+    function viewLogDetails(logId) {
+        const logModal = new bootstrap.Modal(document.getElementById('logModal'));
+        document.getElementById('logDetails').innerHTML = 'Loading log details...';
+        logModal.show();
+        
+        // You can implement this to show detailed log information
+        setTimeout(() => {
+            document.getElementById('logDetails').innerHTML = `
+                <p><strong>Log ID:</strong> ${logId}</p>
+                <p>Detailed log information will be displayed here.</p>
+            `;
+        }, 500);
+    }
+    
+    function viewError(logId) {
+        // Find the log in the page and show its error
+        const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
+        document.getElementById('errorMessage').textContent = 'Error details not available. Check server logs.';
+        errorModal.show();
+    }
+    
+    // Helper function to get CSRF token from cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Auto-refresh logs every 30 seconds if there's an active job
+    let refreshInterval = setInterval(function() {
+        const activeLogs = document.querySelectorAll('.bg-warning');
+        if (activeLogs.length > 0) {
+            location.reload();
+        }
+    }, 30000);
+</script>
+
+<!-- Include CSRF token for AJAX requests -->
+{% csrf_token %}
+{% endblock %}

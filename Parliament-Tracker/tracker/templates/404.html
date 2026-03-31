@@ -1,0 +1,32 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Page Not Found - Parliament Legislative Tracker{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="display-1 text-muted mb-4">
+                <i class="fas fa-exclamation-triangle"></i> 404
+            </div>
+            <h1 class="display-4 mb-4">Page Not Found</h1>
+            <p class="lead mb-5">
+                The page you are looking for might have been removed, had its name changed, 
+                or is temporarily unavailable.
+            </p>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg w-100">
+                        <i class="fas fa-home me-2"></i> Go to Dashboard
+                    </a>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <a href="javascript:history.back()" class="btn btn-outline-primary btn-lg w-100">
+                        <i class="fas fa-arrow-left me-2"></i> Go Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

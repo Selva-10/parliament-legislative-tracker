@@ -1,0 +1,42 @@
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block title %}{{ mp.name }} - MP Details{% endblock %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'mp_list' %}">MPs</a></li>
+            <li class="breadcrumb-item active">{{ mp.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h3>{{ mp.name }}</h3>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered">
+                <tr>
+                    <th style="width: 200px;">State</th>
+                    <td>{{ mp.state.name }}</td>
+                </tr>
+                <tr>
+                    <th>Constituency</th>
+                    <td>{{ mp.constituency }}</td>
+                </tr>
+                <tr>
+                    <th>Party</th>
+                    <td>{{ mp.party.name }} ({{ mp.party.abbreviation }})</td>
+                </tr>
+                <tr>
+                    <th>House</th>
+                    <td>{{ mp.get_house_display }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

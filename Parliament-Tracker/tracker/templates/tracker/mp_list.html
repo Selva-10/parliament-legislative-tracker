@@ -1,0 +1,86 @@
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block title %}Members of Parliament{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4">Members of Parliament</h1>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="state" class="form-label">State</label>
+                    <select name="state" id="state" class="form-control">
+                        <option value="">All States</option>
+                        {% for state in states %}
+                        <option value="{{ state.name }}" {% if request.GET.state == state.name %}selected{% endif %}>{{ state.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="party" class="form-label">Party</label>
+                    <select name="party" id="party" class="form-control">
+                        <option value="">All Parties</option>
+                        {% for party in parties %}
+                        <option value="{{ party.name }}" {% if request.GET.party == party.name %}selected{% endif %}>{{ party.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="house" class="form-label">House</label>
+                    <select name="house" id="house" class="form-control">
+                        <option value="">All Houses</option>
+                        <option value="LOK_SABHA" {% if request.GET.house == 'LOK_SABHA' %}selected{% endif %}>Lok Sabha</option>
+                        <option value="RAJYA_SABHA" {% if request.GET.house == 'RAJYA_SABHA' %}selected{% endif %}>Rajya Sabha</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                    <a href="{% url 'mp_list' %}" class="btn btn-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MPs Table -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>State</th>
+                            <th>Constituency</th>
+                            <th>Party</th>
+                            <th>House</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mp in mps %}
+                        <tr>
+                            <td>{{ mp.name }}</td>
+                            <td>{{ mp.state.name }}</td>
+                            <td>{{ mp.constituency }}</td>
+                            <td>{{ mp.party.name }} ({{ mp.party.abbreviation }})</td>
+                            <td>{{ mp.get_house_display }}</td>
+                            <td>
+                                <a href="{% url 'mp_detail' mp.id %}" class="btn btn-sm btn-info">View</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">No MPs found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

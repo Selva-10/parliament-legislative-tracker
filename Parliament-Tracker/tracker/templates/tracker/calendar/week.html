@@ -1,0 +1,151 @@
+<!-- templates/tracker/calendar/week.html -->
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block title %}Weekly Calendar - Week {{ week }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .week-container {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .week-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .week-grid {
+        display: grid;
+        grid-template-columns: 80px repeat(7, 1fr);
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+    
+    .time-column {
+        background: #f8f9fa;
+        border-right: 1px solid #dee2e6;
+    }
+    
+    .time-slot {
+        height: 60px;
+        padding: 5px;
+        border-bottom: 1px solid #dee2e6;
+        text-align: center;
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .day-column {
+        border-right: 1px solid #dee2e6;
+    }
+    
+    .day-column:last-child {
+        border-right: none;
+    }
+    
+    .day-header {
+        background: #f8f9fa;
+        padding: 10px;
+        text-align: center;
+        font-weight: bold;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .day-header.today {
+        background: #e8f4f8;
+        color: #1a237e;
+    }
+    
+    .day-cell {
+        height: 60px;
+        border-bottom: 1px solid #dee2e6;
+        padding: 2px;
+        position: relative;
+    }
+    
+    .week-event {
+        position: absolute;
+        left: 2px;
+        right: 2px;
+        padding: 2px 4px;
+        border-radius: 3px;
+        color: white;
+        font-size: 0.7rem;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        cursor: pointer;
+        z-index: 10;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4">Weekly Calendar - Week {{ week }}, {{ year }}</h1>
+    
+    <div class="view-switcher">
+        <a href="{% url 'calendar_month' year=year month=now|date:'m' %}" class="view-btn">Month</a>
+        <a href="{% url 'calendar_week' year=year week=week %}" class="view-btn active">Week</a>
+        <a href="{% url 'calendar_day' year=year month=now.month day=now.day %}" class="view-btn">Day</a>
+    </div>
+    
+    <div class="week-container">
+        <div class="week-header">
+            <h3>{{ start_of_week|date:"M d" }} - {{ end_of_week|date:"M d, Y" }}</h3>
+            <div>
+                <a href="{% url 'calendar_week' year=prev_year week=prev_week %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-chevron-left"></i> Previous Week
+                </a>
+                <a href="{% url 'calendar_week' year=year week=now|date:'W' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-calendar"></i> This Week
+                </a>
+                <a href="{% url 'calendar_week' year=next_year week=next_week %}" class="btn btn-sm btn-outline-primary">
+                    Next Week <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+        
+        <div class="week-grid">
+            <!-- Time column -->
+            <div class="time-column">
+                {% for hour in "01234567891011121314151617181920212223"|make_list %}
+                <div class="time-slot">{{ hour }}:00</div>
+                {% endfor %}
+            </div>
+            
+            <!-- Day columns -->
+            {% for day in week_days %}
+            <div class="day-column">
+                <div class="day-header {% if day.is_today %}today{% endif %}">
+                    {{ day.date|date:"D" }}<br>
+                    <strong>{{ day.date|date:"M d" }}</strong>
+                </div>
+                
+                <!-- Time slots for this day -->
+                {% for hour in "01234567891011121314151617181920212223"|make_list %}
+                <div class="day-cell" data-hour="{{ hour }}" data-date="{{ day.date|date:'Y-m-d' }}">
+                    {% for event in day.events %}
+                        {% if event.start_datetime.hour == hour|add:0 %}
+                        <div class="week-event event-{{ event.event_type }}" 
+                             style="top: {{ event.start_datetime.minute }}px; height: {% widthratio event.end_datetime|timeuntil:event.start_datetime 60 60 %}px;"
+                             onclick="location.href='{% url 'calendar_event_detail' event.id %}'">
+                            {{ event.start_datetime|time:"H:i" }} {{ event.title|truncatechars:15 }}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,242 @@
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block title %}Map View - Parliament Tracker{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    #map {
+        height: 600px;
+        width: 100%;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .filter-card {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .stats-card {
+        background: #f8f9fc;
+        border-left: 4px solid #4e73df;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+    }
+    .legend {
+        background: white;
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        line-height: 1.5;
+    }
+    .legend i {
+        width: 18px;
+        height: 18px;
+        float: left;
+        margin-right: 8px;
+        opacity: 0.7;
+        border-radius: 50%;
+    }
+    .legend-item {
+        margin-bottom: 5px;
+        clear: both;
+    }
+    .loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255,255,255,0.8);
+        padding: 10px 20px;
+        border-radius: 5px;
+        z-index: 1000;
+        display: none;
+    }
+    #map-container {
+        position: relative;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4">Geographical Distribution of Bills</h1>
+
+    <!-- Filter Card -->
+    <div class="filter-card">
+        <form id="filter-form" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Bill Status</label>
+                <select name="status" class="form-control" id="status-filter">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Status</option>
+                    <option value="PASSED" {% if status_filter == 'PASSED' %}selected{% endif %}>Passed</option>
+                    <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+                    <option value="REJECTED" {% if status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                    <option value="WITHDRAWN" {% if status_filter == 'WITHDRAWN' %}selected{% endif %}>Withdrawn</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Year</label>
+                <select name="year" class="form-control" id="year-filter">
+                    <option value="all" {% if year_filter == 'all' %}selected{% endif %}>All Years</option>
+                    {% for year in years %}
+                    <option value="{{ year }}" {% if year_filter == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="button" class="btn btn-primary w-100" id="update-map">
+                    <i class="fas fa-sync-alt"></i> Update Map
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Map and Stats Row -->
+    <div class="row">
+        <div class="col-md-9">
+            <div id="map-container">
+                <div class="loading" id="loading">Updating map...</div>
+                <div id="map"></div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <h5>Statistics</h5>
+                <p><strong>Total Bills:</strong> <span id="total-bills">{{ total_bills }}</span></p>
+                <p><strong>States with Bills:</strong> <span id="states-count">0</span></p>
+                <hr>
+                <h6>Top States:</h6>
+                <ul id="top-states" class="list-unstyled">
+                    <!-- populated by JS -->
+                </ul>
+            </div>
+            <div class="legend">
+                <h6>Party Color Legend</h6>
+                <div class="legend-item"><i style="background:#FF9933;"></i> BJP</div>
+                <div class="legend-item"><i style="background:#0000FF;"></i> INC</div>
+                <div class="legend-item"><i style="background:#28a745;"></i> Independent</div>
+                <div class="legend-item"><i style="background:#808080;"></i> Other/Unknown</div>
+                <p class="small text-muted mt-2">Circle size = number of bills</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize map centered on India
+    const map = L.map('map').setView([22.0, 79.0], 5);
+    
+    // Restrict view to roughly India (optional)
+    const southWest = L.latLng(6.0, 68.0);
+    const northEast = L.latLng(37.0, 97.0);
+    const bounds = L.latLngBounds(southWest, northEast);
+    map.setMaxBounds(bounds);
+    map.on('drag', function() {
+        map.panInsideBounds(bounds, { animate: false });
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Static coordinates for states (from Django)
+    const stateCoords = {{ state_coords|safe }};
+
+    // Party color mapping
+    function getPartyColor(party) {
+        const partyLower = (party || '').toLowerCase();
+        if (partyLower.includes('bjp')) return '#FF9933';
+        if (partyLower.includes('inc') || partyLower.includes('congress')) return '#0000FF';
+        if (partyLower.includes('independent')) return '#28a745';
+        return '#808080'; // default gray
+    }
+
+    let currentLayerGroup = L.layerGroup().addTo(map);
+    let currentStatesData = [];
+
+    function updateMap() {
+        document.getElementById('loading').style.display = 'block';
+        const status = document.getElementById('status-filter').value;
+        const year = document.getElementById('year-filter').value;
+
+        fetch(`/map/?status=${status}&year=${year}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loading').style.display = 'none';
+            currentStatesData = data.states;
+
+            // Update statistics
+            document.getElementById('total-bills').textContent = data.total_bills;
+            const statesWithBills = data.states.filter(s => s.count > 0).length;
+            document.getElementById('states-count').textContent = statesWithBills;
+
+            // Top 5 states by count
+            const topStates = [...data.states].sort((a,b) => b.count - a.count).slice(0,5);
+            const topList = document.getElementById('top-states');
+            topList.innerHTML = '';
+            topStates.forEach(s => {
+                topList.innerHTML += `<li><strong>${s.state}:</strong> ${s.count} bills (${s.party})</li>`;
+            });
+
+            // Clear old circles
+            currentLayerGroup.clearLayers();
+
+            // Add new circles
+            data.states.forEach(state => {
+                if (state.count === 0) return;
+                const coords = stateCoords[state.state] || stateCoords['Other'];
+                const radius = Math.sqrt(state.count) * 30000; // scale factor
+                const color = getPartyColor(state.party);
+
+                const circle = L.circle(coords, {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.6,
+                    radius: radius,
+                    weight: 2
+                }).addTo(currentLayerGroup);
+
+                // Bind popup with state info
+                circle.bindPopup(`
+                    <b>${state.state}</b><br>
+                    Bills: ${state.count}<br>
+                    Dominant Party: ${state.party}
+                `);
+
+                // On click, go to bills list filtered by state
+                circle.on('click', function() {
+                    window.location.href = `/bills/?search=${encodeURIComponent(state.state)}`;
+                });
+            });
+        })
+        .catch(error => {
+            document.getElementById('loading').style.display = 'none';
+            console.error('Error updating map:', error);
+        });
+    }
+
+    // Initial load
+    updateMap();
+
+    // Update on button click or filter change
+    document.getElementById('update-map').addEventListener('click', updateMap);
+    document.getElementById('status-filter').addEventListener('change', updateMap);
+    document.getElementById('year-filter').addEventListener('change', updateMap);
+});
+</script>
+{% endblock %}
+// In the updateMap() function, inside the loop over data.states
+circle.on('click', function() {
+    window.location.href = `/bills/?state=${encodeURIComponent(state.state)}`;
+});
