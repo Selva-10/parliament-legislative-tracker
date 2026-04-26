@@ -91,6 +91,16 @@
     .badge-danger { background-color: #dc3545; color: white; padding: 3px 8px; border-radius: 4px; }
     .badge-secondary { background-color: #6c757d; color: white; padding: 3px 8px; border-radius: 4px; }
     .badge-info { background-color: #17a2b8; color: white; padding: 3px 8px; border-radius: 4px; }
+    .loading-text {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+    }
+    .fc-daygrid-more-link {
+        cursor: pointer;
+        color: #1a237e !important;
+        font-weight: 500 !important;
+    }
 </style>
 {% endblock %}
 
@@ -150,7 +160,7 @@
         <div>
             <button class="btn btn-primary" id="apply-filters">Apply Filters</button>
             <a href="?format=ical" class="btn btn-success" id="download-ical">
-                <i class="bi bi-calendar-plus"></i> download iCal
+                <i class="bi bi-calendar-plus"></i> Download iCal
             </a>
         </div>
     </div>
@@ -208,7 +218,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const calendarEl = document.getElementById('calendar');
     let calendar;
     let allEvents = [];
-    let isMoreLinkProcessing = false;
 
     function getStatusColor(status) {
         switch(status) {
@@ -253,93 +262,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Create day modal dynamically
-    function createDayModal() {
-        const modalHtml = `
-            <div class="modal fade" id="dayModal" tabindex="-1">
-                <div class="modal-dialog modal-lg modal-dialog-scrollable">
-                    <div class="modal-content">
-                        <div class="modal-header bg-primary text-white">
-                            <h5 class="modal-title" id="dayModalTitle">Bills for </h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div id="day-bill-list" class="day-bill-list"></div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        return document.getElementById('dayModal');
-    }
-
-    function showDayBills(dateStr, events) {
-        const existingModal = document.getElementById('dayModal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-
-        const modalEl = createDayModal();
-        const modalTitle = document.getElementById('dayModalTitle');
-        const modalBody = document.getElementById('day-bill-list');
-
-        const formattedDate = formatDate(dateStr);
-        if (!formattedDate) {
-            console.warn('Invalid date string:', dateStr);
-            return;
-        }
-
-        modalTitle.textContent = `Bills for ${formattedDate}`;
-        modalBody.innerHTML = '';
-
-        if (events && events.length > 0) {
-            events.sort((a, b) => a.title.localeCompare(b.title));
-
-            events.forEach(event => {
-                const status = event.extendedProps.status || 'PENDING';
-                const statusClass = getStatusClass(status);
-                const isUpcoming = event.extendedProps.is_upcoming;
-                const itemClass = isUpcoming ? 'upcoming' : statusClass;
-                const badgeClass = isUpcoming ? 'badge-info' : `badge-${statusClass}`;
-                const billId = event.extendedProps.id || event.id;
-                const house = event.extendedProps.house ? event.extendedProps.house.replace('_', ' ') : 'Unknown';
-
-                const itemDiv = document.createElement('div');
-                itemDiv.className = `day-bill-item ${itemClass}`;
-                itemDiv.onclick = function() {
-                    showBillDetails(billId);
-                };
-                itemDiv.innerHTML = `
-                    <strong>${event.title}</strong><br>
-                    <small>
-                        Status: <span class="${badgeClass}">${status}${isUpcoming ? ' (Upcoming)' : ''}</span> |
-                        House: ${house} |
-                        Introduced By: ${event.extendedProps.introduced_by || 'Unknown'}
-                    </small>
-                `;
-                modalBody.appendChild(itemDiv);
-            });
-        } else {
-            modalBody.innerHTML = '<p class="text-center text-muted py-4">No bills on this day</p>';
-        }
-
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
-
-        modalEl.addEventListener('hidden.bs.modal', function() {
-            modalEl.remove();
-        }, { once: true });
-    }
-
-    window.showBillDetails = function(billId) {
-        const modalEl = document.getElementById('billModal');
-        const bill = allEvents.find(e => e.id === billId || e.extendedProps?.id === billId);
+    function showBillDetails(billId) {
+        const bill = allEvents.find(e => e.id == billId);
         if (!bill) return;
 
+        const modalEl = document.getElementById('billModal');
         const statusClass = getStatusClass(bill.extendedProps.status);
         const badgeClass = `badge-${statusClass}`;
         const isUpcoming = bill.extendedProps.is_upcoming;
@@ -363,104 +290,180 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         document.getElementById('modalViewLink').href = `/bills/${bill.extendedProps.id}/`;
 
-        const existingModal = bootstrap.Modal.getInstance(modalEl);
-        if (existingModal) {
-            existingModal.hide();
-        }
-        const backdrop = document.querySelector('.modal-backdrop');
-        if (backdrop) {
-            backdrop.remove();
-        }
-        document.body.classList.remove('modal-open');
-        document.body.style.overflow = '';
-
         const modal = new bootstrap.Modal(modalEl);
         modal.show();
-    };
+    }
 
-    function loadEvents() {
+    // Function to load events for a specific date range
+    function loadEventsForDateRange(startDate, endDate) {
         const status = document.getElementById('status-filter').value;
         const house = document.getElementById('house-filter').value;
         const type = document.getElementById('type-filter').value;
 
-        fetch(`/api/bills/?status=${status}&house=${house}&limit=1000`)
+        // Show loading indicator on calendar
+        calendarEl.style.opacity = '0.5';
+        
+        // Build URL with date range
+        let url = `/api/bills/?limit=2000`;
+        if (status !== 'all') {
+            url += `&status=${status}`;
+        }
+        if (house !== 'all') {
+            url += `&house=${house}`;
+        }
+        if (startDate && endDate) {
+            url += `&start_date=${startDate}&end_date=${endDate}`;
+        }
+
+        fetch(url)
             .then(response => response.json())
             .then(data => {
                 let filteredBills = data.bills.filter(bill => bill.introduction_date);
-
+                
                 // Apply type filter
+                const today = new Date().toISOString().split('T')[0];
                 if (type === 'upcoming') {
-                    filteredBills = filteredBills.filter(bill => bill.is_upcoming);
+                    filteredBills = filteredBills.filter(bill => bill.introduction_date > today);
                 } else if (type === 'past') {
-                    filteredBills = filteredBills.filter(bill => !bill.is_upcoming);
+                    filteredBills = filteredBills.filter(bill => bill.introduction_date <= today);
                 }
 
                 allEvents = filteredBills.map(bill => ({
                     id: bill.id,
-                    title: `${bill.bill_id}: ${bill.title.substring(0, 40)}...`,
+                    title: bill.title.length > 50 ? bill.title.substring(0, 47) + '...' : bill.title,
                     start: bill.introduction_date,
                     extendedProps: bill,
                     color: getStatusColor(bill.status),
                     className: bill.is_upcoming ? 'upcoming-event' : '',
                 }));
 
-                if (calendar) {
-                    calendar.removeAllEvents();
-                    calendar.addEventSource(allEvents);
-                } else {
-                    calendar = new FullCalendar.Calendar(calendarEl, {
-                        initialView: 'dayGridMonth',
-                        headerToolbar: {
-                            left: 'prev,next today',
-                            center: 'title',
-                            right: ''
-                        },
-                        events: allEvents,
-                        eventClick: function(info) {
-                            info.jsEvent.preventDefault();
-                            showBillDetails(info.event.id);
-                        },
-                        eventDidMount: function(info) {
-                            info.el.setAttribute('title', info.event.title);
-                        },
-                        dayMaxEventRows: 3,
-                        dayMaxEvents: 3,
-                        moreLinkClick: function(info) {
-                            if (isMoreLinkProcessing) return false;
-                            isMoreLinkProcessing = true;
-
-                            info.jsEvent.preventDefault();
-                            info.jsEvent.stopPropagation();
-
-                            const dayEvents = allEvents.filter(event => event.start === info.dateStr);
-                            showDayBills(info.dateStr, dayEvents);
-
-                            setTimeout(() => { isMoreLinkProcessing = false; }, 500);
-                            return false;
-                        }
-                    });
-                    calendar.render();
-                }
+                // Clear and add events to calendar
+                calendar.removeAllEvents();
+                calendar.addEventSource(allEvents);
+                calendarEl.style.opacity = '1';
             })
-            .catch(error => console.error('Error loading events:', error));
+            .catch(error => {
+                console.error('Error loading events:', error);
+                calendarEl.style.opacity = '1';
+            });
     }
 
-    // Initial load
-    loadEvents();
+    // Initialize calendar
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,dayGridWeek'
+        },
+        events: [], // Start empty, we'll load dynamically
+        eventClick: function(info) {
+            info.jsEvent.preventDefault();
+            showBillDetails(info.event.id);
+        },
+        eventDidMount: function(info) {
+            info.el.setAttribute('title', info.event.title);
+        },
+        dayMaxEventRows: 3,
+        dayMaxEvents: 3,
+        moreLinkClick: function(info) {
+            info.jsEvent.preventDefault();
+            
+            // Get the date from the cell
+            const clickedDate = info.date.toISOString().split('T')[0];
+            const eventsOnDate = allEvents.filter(event => {
+                if (!event.start) return false;
+                const eventDate = event.start.split('T')[0];
+                return eventDate === clickedDate;
+            });
+            
+            // Show modal with bills for that day
+            const modalEl = document.getElementById('dayModal');
+            const formattedDate = formatDate(clickedDate);
+            document.getElementById('dayModalTitle').textContent = `Bills for ${formattedDate}`;
+            
+            const modalBody = document.getElementById('day-bill-list');
+            modalBody.innerHTML = '';
+            
+            if (eventsOnDate.length > 0) {
+                eventsOnDate.forEach(event => {
+                    const status = event.extendedProps.status || 'PENDING';
+                    const statusClass = getStatusClass(status);
+                    const badgeClass = `badge-${statusClass}`;
+                    
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = `day-bill-item ${statusClass}`;
+                    itemDiv.onclick = function() {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        modal.hide();
+                        showBillDetails(event.id);
+                    };
+                    itemDiv.innerHTML = `
+                        <strong>${event.title}</strong><br>
+                        <small>
+                            Status: <span class="${badgeClass}">${status}</span> |
+                            House: ${event.extendedProps.house ? event.extendedProps.house.replace('_', ' ') : 'Unknown'}
+                        </small>
+                    `;
+                    modalBody.appendChild(itemDiv);
+                });
+            } else {
+                modalBody.innerHTML = '<p class="text-center text-muted py-4">No bills on this day</p>';
+            }
+            
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        },
+        // KEY FIX: This runs whenever the user navigates to a different month/week
+        datesSet: function(info) {
+            const startDate = info.start.toISOString().split('T')[0];
+            const endDate = info.end.toISOString().split('T')[0];
+            console.log(`Loading events from ${startDate} to ${endDate}`); // Debug log
+            loadEventsForDateRange(startDate, endDate);
+        }
+    });
+    
+    calendar.render();
+    
+    // Initial load - get events for the current visible range
+    const initialStart = calendar.view.activeStart.toISOString().split('T')[0];
+    const initialEnd = calendar.view.activeEnd.toISOString().split('T')[0];
+    loadEventsForDateRange(initialStart, initialEnd);
 
-    // Apply filters
-    document.getElementById('apply-filters').addEventListener('click', loadEvents);
-    document.getElementById('status-filter').addEventListener('change', loadEvents);
-    document.getElementById('house-filter').addEventListener('change', loadEvents);
-    document.getElementById('type-filter').addEventListener('change', loadEvents);
+    // Apply filters button
+    document.getElementById('apply-filters').addEventListener('click', function() {
+        const startDate = calendar.view.activeStart.toISOString().split('T')[0];
+        const endDate = calendar.view.activeEnd.toISOString().split('T')[0];
+        loadEventsForDateRange(startDate, endDate);
+    });
+    
+    // Auto-refresh when dropdowns change
+    document.getElementById('status-filter').addEventListener('change', function() {
+        const startDate = calendar.view.activeStart.toISOString().split('T')[0];
+        const endDate = calendar.view.activeEnd.toISOString().split('T')[0];
+        loadEventsForDateRange(startDate, endDate);
+    });
+    
+    document.getElementById('house-filter').addEventListener('change', function() {
+        const startDate = calendar.view.activeStart.toISOString().split('T')[0];
+        const endDate = calendar.view.activeEnd.toISOString().split('T')[0];
+        loadEventsForDateRange(startDate, endDate);
+    });
+    
+    document.getElementById('type-filter').addEventListener('change', function() {
+        const startDate = calendar.view.activeStart.toISOString().split('T')[0];
+        const endDate = calendar.view.activeEnd.toISOString().split('T')[0];
+        loadEventsForDateRange(startDate, endDate);
+    });
 
-    // download iCal with current filters
+    // Download iCal with current filters
     document.getElementById('download-ical').addEventListener('click', function(e) {
+        e.preventDefault();
         const status = document.getElementById('status-filter').value;
         const house = document.getElementById('house-filter').value;
         const url = new URL(window.location.href);
-        url.searchParams.set('status', status);
-        url.searchParams.set('house', house);
+        url.searchParams.set('status', status === 'all' ? '' : status);
+        url.searchParams.set('house', house === 'all' ? '' : house);
         url.searchParams.set('format', 'ical');
         window.location.href = url.toString();
     });

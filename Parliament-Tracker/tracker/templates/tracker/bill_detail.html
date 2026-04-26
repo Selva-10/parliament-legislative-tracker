@@ -3,7 +3,8 @@
 {% block title %}{{ bill.title }} - Parliament Tracker{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container-fluid">
+    <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
@@ -12,57 +13,442 @@
         </ol>
     </nav>
 
-    <div class="card">
-        <div class="card-header bg-primary text-white">
-            <h2 class="h4 mb-0">{{ bill.title }}</h2>
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Main Bill Info Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">{{ bill.title }}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th style="width: 40%">Bill ID</th>
+                                    <td>{{ bill.bill_id }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Bill Number</th>
+                                    <td>{{ bill.bill_number|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Bill Type</th>
+                                    <td>
+                                        {% if bill.bill_type %}
+                                            <span class="badge bg-info">{{ bill.get_bill_type_display }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Government Bill</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>House</th>
+                                    <td>{{ bill.get_house_display|default:bill.house }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Originating House</th>
+                                    <td>{{ bill.get_originating_house_display|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Ministry</th>
+                                    <td>{{ bill.ministry|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>State</th>
+                                    <td>{{ bill.state|default:"-" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-bordered">
+                               
+                                <tr>
+                                    <th>Introduction Date</th>
+                                    <td><strong>{{ bill.introduction_date|date:"d F Y"|default:"-" }}</strong></td>
+                                </tr>
+                                <tr>
+                                    <th>Legislative Year</th>
+                                    <td>{{ bill.legislative_year|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Source</th>
+                                    <td>{{ bill.source|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Last Updated</th>
+                                    <td>{{ bill.last_updated|date:"d M Y H:i"|default:"-" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Status</th>
+                                    <td>
+                                        <span class="badge bg-{{ bill.status_color }} fs-6">
+                                            {{ bill.get_status_display|default:bill.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Legislative Journey Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h3 class="h5 mb-0">
+                        <i class="bi bi-diagram-3"></i> Legislative Journey
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Timeline -->
+                    <div class="timeline">
+                        <!-- Introduction -->
+                        <div class="timeline-item d-flex mb-4">
+                            <div class="timeline-icon me-3">
+                                <div class="bg-primary rounded-circle p-2 text-white text-center" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-calendar-plus"></i>
+                                </div>
+                            </div>
+                            <div class="timeline-content flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong>Bill Introduced</strong>
+                                    <span class="text-primary">{{ bill.introduction_date|date:"d F Y"|default:"Date not specified" }}</span>
+                                </div>
+                                <p class="text-muted mb-0 small">
+                                    Introduced in {{ bill.get_house_display|default:bill.house }}
+                                    {% if bill.introduced_by %} by {{ bill.introduced_by }}{% endif %}
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Committee Referral -->
+                        {% if bill.referred_to_committee or bill.committee_name or bill.committee_report_date %}
+                        <div class="timeline-item d-flex mb-4">
+                            <div class="timeline-icon me-3">
+                                <div class="bg-info rounded-circle p-2 text-white text-center" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-people"></i>
+                                </div>
+                            </div>
+                            <div class="timeline-content flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong>Committee Review</strong>
+                                    <span class="text-info">
+                                        {% if bill.committee_report_date %}
+                                            {{ bill.committee_report_date|date:"d F Y" }}
+                                        {% else %}
+                                            Referred
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <p class="text-muted mb-0 small">
+                                    {% if bill.committee_name %}
+                                        Referred to {{ bill.committee_name }}
+                                    {% else %}
+                                        Referred to Parliamentary Committee
+                                    {% endif %}
+                                    {% if bill.committee_report_date %}
+                                        <br>Report presented on {{ bill.committee_report_date|date:"d F Y" }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Passed in Lok Sabha -->
+                        {% if bill.passed_in_ls_date or bill.debated_on_ls_date %}
+                        <div class="timeline-item d-flex mb-4">
+                            <div class="timeline-icon me-3">
+                                <div class="bg-success rounded-circle p-2 text-white text-center" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-building"></i>
+                                </div>
+                            </div>
+                            <div class="timeline-content flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong>Passed in Lok Sabha</strong>
+                                    <span class="text-success">{{ bill.passed_in_ls_date|date:"d F Y" }}</span>
+                                </div>
+                                <p class="text-muted mb-0 small">Bill cleared the Lower House of Parliament</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Passed in Rajya Sabha -->
+                        {% if bill.passed_in_rs_date or bill.debated_on_rs_date %}
+                        <div class="timeline-item d-flex mb-4">
+                            <div class="timeline-icon me-3">
+                                <div class="bg-success rounded-circle p-2 text-white text-center" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-university"></i>
+                                </div>
+                            </div>
+                            <div class="timeline-content flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong>Passed in Rajya Sabha</strong>
+                                    <span class="text-success">{{ bill.passed_in_rs_date|date:"d F Y" }}</span>
+                                </div>
+                                <p class="text-muted mb-0 small">Bill cleared the Upper House of Parliament</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Presidential Assent -->
+                        {% if bill.assent_date %}
+                        <div class="timeline-item d-flex mb-4">
+                            <div class="timeline-icon me-3">
+                                <div class="bg-warning rounded-circle p-2 text-dark text-center" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-check2-all"></i>
+                                </div>
+                            </div>
+                            <div class="timeline-content flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong>Presidential Assent</strong>
+                                    <span class="text-warning">{{ bill.assent_date|date:"d F Y" }}</span>
+                                </div>
+                                <p class="text-muted mb-0 small">
+                                    Bill received Presidential assent
+                                    {% if bill.act_number %} and became Act No. {{ bill.act_number }}{% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Gazette Notification -->
+                        {% if bill.gazette_notification_date %}
+                        <div class="timeline-item d-flex">
+                            <div class="timeline-icon me-3">
+                                <div class="bg-secondary rounded-circle p-2 text-white text-center" style="width: 40px; height: 40px;">
+                                    <i class="bi bi-newspaper"></i>
+                                </div>
+                            </div>
+                            <div class="timeline-content flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong>Gazette Notification</strong>
+                                    <span class="text-secondary">{{ bill.gazette_notification_date|date:"d F Y" }}</span>
+                                </div>
+                                <p class="text-muted mb-0 small">
+                                    {% if bill.gazette_notification_number %}
+                                        Notification No: {{ bill.gazette_notification_number }}
+                                    {% else %}
+                                        Published in Official Gazette
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Summary Alert -->
+                    {% if bill.legislative_summary %}
+                    <div class="alert alert-info mt-4 mb-0">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <strong>Legislative Summary:</strong><br>
+                        {{ bill.legislative_summary }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Description & Objective -->
+            {% if bill.description %}
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="h5 mb-0">
+                        <i class="bi bi-file-text"></i> Description
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <p>{{ bill.description|linebreaks }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if bill.objective %}
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="h5 mb-0">
+                        <i class="bi bi-bullseye"></i> Objective
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <p>{{ bill.objective|linebreaks }}</p>
+                </div>
+            </div>
+            {% endif %}
         </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <table class="table table-bordered">
-                        <tr><th>Bill ID</th><td>{{ bill.bill_id }}</td></tr>
-                        <tr><th>Bill Number</th><td>{{ bill.bill_number|default:"-" }}</td></tr>
-                        <tr><th>House</th><td>{{ bill.get_house_display|default:bill.house }}</td></tr>
-                        <tr><th>Status</th><td><span class="badge bg-{{ bill.status_color }}">{{ bill.get_status_display|default:bill.status }}</span></td></tr>
-                        <tr><th>Introduction Date</th><td>{{ bill.introduction_date|date:"d M Y"|default:"-" }}</td></tr>
-                        {% if bill.passed_date %}
-                        <tr><th>Passed Date</th><td>{{ bill.passed_date|date:"d M Y" }}</td></tr>
+
+        <div class="col-md-4">
+            <!-- Status Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-{{ bill.status_color }} text-white">
+                    <h5 class="mb-0">Current Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <i class="bi bi-{% if bill.status == 'PASSED' %}check-circle{% elif bill.status == 'PENDING' %}clock-history{% elif bill.status == 'REJECTED' %}x-circle{% else %}file-text{% endif %} fs-1"></i>
+                        <h3 class="mt-2">{{ bill.get_status_display|default:bill.status }}</h3>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="status-details">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Lok Sabha:</span>
+                            <strong>
+                                {% if bill.passed_in_ls_date %}
+                                    <span class="text-success">✓ Passed</span>
+                                {% else %}
+                                    <span class="text-warning">Pending</span>
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Rajya Sabha:</span>
+                            <strong>
+                                {% if bill.passed_in_rs_date %}
+                                    <span class="text-success">✓ Passed</span>
+                                {% else %}
+                                    <span class="text-warning">Pending</span>
+                                {% endif %}
+                            </strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Presidential Assent:</span>
+                            <strong>
+                                {% if bill.assent_date %}
+                                    <span class="text-success">✓ Received</span>
+                                {% else %}
+                                    <span class="text-secondary">Pending</span>
+                                {% endif %}
+                            </strong>
+                        </div>
+                        {% if bill.referred_to_committee %}
+                        <div class="d-flex justify-content-between">
+                            <span>Committee:</span>
+                            <strong>
+                                <span class="text-info">✓ Referred</span>
+                            </strong>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Dates Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Key Dates</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <tr>
+                            <td><i class="bi bi-calendar-plus"></i> Introduced:</td>
+                            <td class="text-end"><strong>{{ bill.introduction_date|date:"d M Y"|default:"-" }}</strong></td>
+                        </tr>
+                        {% if bill.passed_in_ls_date %}
+                        <tr>
+                            <td><i class="bi bi-building"></i> Passed in LS:</td>
+                            <td class="text-end"><strong>{{ bill.passed_in_ls_date|date:"d M Y" }}</strong></td>
+                        </tr>
+                        {% endif %}
+                        {% if bill.passed_in_rs_date %}
+                        <tr>
+                            <td><i class="bi bi-university"></i> Passed in RS:</td>
+                            <td class="text-end"><strong>{{ bill.passed_in_rs_date|date:"d M Y" }}</strong></td>
+                        </tr>
+                        {% endif %}
+                        {% if bill.committee_report_date %}
+                        <tr>
+                            <td><i class="bi bi-people"></i> Committee Report:</td>
+                            <td class="text-end"><strong>{{ bill.committee_report_date|date:"d M Y" }}</strong></td>
+                        </tr>
+                        {% endif %}
+                        {% if bill.assent_date %}
+                        <tr>
+                            <td><i class="bi bi-check2-circle"></i> Presidential Assent:</td>
+                            <td class="text-end"><strong>{{ bill.assent_date|date:"d M Y" }}</strong></td>
+                        </tr>
+                        {% endif %}
+                        {% if bill.gazette_notification_date %}
+                        <tr>
+                            <td><i class="bi bi-newspaper"></i> Gazette:</td>
+                            <td class="text-end"><strong>{{ bill.gazette_notification_date|date:"d M Y" }}</strong></td>
+                        </tr>
                         {% endif %}
                     </table>
                 </div>
-                <div class="col-md-6">
-                    <table class="table table-bordered">
-                        <tr><th>Introduced By</th><td>{{ bill.introduced_by|default:"-" }} ({{ bill.introduced_by_party|default:"-" }})</td></tr>
-                        <tr><th>Ministry</th><td>{{ bill.ministry|default:"-" }}</td></tr>
-                        <tr><th>Source</th><td>{{ bill.source|default:"-" }}</td></tr>
-                        <tr><th>Last Updated</th><td>{{ bill.last_updated|date:"d M Y H:i"|default:"-" }}</td></tr>
-                    </table>
+            </div>
+
+            <!-- Links Card -->
+            {% if bill.prs_link or bill.loksabha_link or bill.rajyasabha_link or bill.bill_url or bill.pdf_link %}
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Related Links</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-column gap-2">
+                        {% if bill.prs_link %}
+                        <a href="{{ bill.prs_link }}" target="_blank" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-file-text"></i> PRS India
+                        </a>
+                        {% endif %}
+                        {% if bill.loksabha_link %}
+                        <a href="{{ bill.loksabha_link }}" target="_blank" class="btn btn-outline-info btn-sm">
+                            <i class="bi bi-building"></i> Lok Sabha
+                        </a>
+                        {% endif %}
+                        {% if bill.rajyasabha_link %}
+                        <a href="{{ bill.rajyasabha_link }}" target="_blank" class="btn btn-outline-info btn-sm">
+                            <i class="bi bi-university"></i> Rajya Sabha
+                        </a>
+                        {% endif %}
+                        {% if bill.bill_url %}
+                        <a href="{{ bill.bill_url }}" target="_blank" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-link-45deg"></i> Official Bill Page
+                        </a>
+                        {% endif %}
+                        {% if bill.pdf_link %}
+                        <a href="{{ bill.pdf_link }}" target="_blank" class="btn btn-outline-danger btn-sm">
+                            <i class="bi bi-file-pdf"></i> Download PDF
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-            {% if bill.description %}
-            <div class="mt-4">
-                <h5>Description</h5>
-                <p>{{ bill.description|linebreaks }}</p>
+            {% endif %}
+
+            <!-- Tags Card -->
+            {% if bill.tags %}
+            <div class="card mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Tags</h5>
+                </div>
+                <div class="card-body">
+                    {% for tag in bill.tags %}
+                    <span class="badge bg-secondary me-1 mb-1">{{ tag }}</span>
+                    {% endfor %}
+                </div>
             </div>
             {% endif %}
-            {% if bill.objective %}
-            <div class="mt-4">
-                <h5>Objective</h5>
-                <p>{{ bill.objective|linebreaks }}</p>
-            </div>
-            {% endif %}
-            <div class="mt-4">
-                {% if bill.prs_link %}
-                <a href="{{ bill.prs_link }}" target="_blank" class="btn btn-outline-primary">PRS India</a>
-                {% endif %}
-                {% if bill.loksabha_link %}
-                <a href="{{ bill.loksabha_link }}" target="_blank" class="btn btn-outline-primary">Lok Sabha</a>
-                {% endif %}
-                {% if bill.rajyasabha_link %}
-                <a href="{{ bill.rajyasabha_link }}" target="_blank" class="btn btn-outline-primary">Rajya Sabha</a>
-                {% endif %}
-            </div>
         </div>
     </div>
 </div>
+
+<style>
+.timeline-item:last-child {
+    margin-bottom: 0 !important;
+}
+.timeline-icon {
+    flex-shrink: 0;
+}
+.card-header.bg-success, .card-header.bg-info, .card-header.bg-secondary {
+    border-bottom: none;
+}
+.timeline-content {
+    border-left: 2px solid #dee2e6;
+    padding-left: 20px;
+}
+.timeline-item:last-child .timeline-content {
+    border-left: none;
+}
+</style>
 {% endblock %}

@@ -1,242 +1,408 @@
 {% extends 'tracker/base.html' %}
 {% load static %}
 
-{% block title %}Map View - Parliament Tracker{% endblock %}
+{% block title %}India State Map{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
     #map {
-        height: 600px;
+        height: 650px;
         width: 100%;
-        border-radius: 8px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     }
-    .filter-card {
+    
+    .info-panel {
         background: white;
         padding: 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        max-height: 650px;
+        overflow-y: auto;
     }
-    .stats-card {
-        background: #f8f9fc;
-        border-left: 4px solid #4e73df;
-        padding: 15px;
-        border-radius: 5px;
+    
+    .state-name-title {
+        font-size: 1.4rem;
+        font-weight: bold;
+        color: #1a237e;
+        border-left: 4px solid #1a237e;
+        padding-left: 12px;
         margin-bottom: 15px;
     }
+    
+    .bill-count-badge {
+        background: #e8f5e9;
+        color: #2e7d32;
+        padding: 10px;
+        border-radius: 12px;
+        text-align: center;
+        margin: 15px 0;
+    }
+    
+    .bill-count-number {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+    
+    .bill-list {
+        max-height: 450px;
+        overflow-y: auto;
+    }
+    
+    .bill-item {
+        background: #f8f9fa;
+        padding: 12px 15px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border-left: 4px solid #28a745;
+    }
+    
+    .bill-item:hover {
+        background: #e8f0fe;
+        transform: translateX(5px);
+    }
+    
+    .bill-title {
+        font-weight: 600;
+        color: #333;
+        font-size: 13px;
+    }
+    
+    .bill-year {
+        font-size: 11px;
+        color: #666;
+        margin-top: 5px;
+    }
+    
+    .loading-spinner {
+        text-align: center;
+        padding: 40px;
+    }
+    
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #1a237e;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+    }
+    
     .legend {
         background: white;
-        padding: 10px;
-        border-radius: 5px;
-        box-shadow: 0 0 15px rgba(0,0,0,0.1);
-        line-height: 1.5;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+        font-size: 12px;
     }
-    .legend i {
-        width: 18px;
-        height: 18px;
-        float: left;
+    
+    .legend span {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 2px;
         margin-right: 8px;
-        opacity: 0.7;
-        border-radius: 50%;
     }
-    .legend-item {
-        margin-bottom: 5px;
-        clear: both;
+    
+    .state-label {
+        font-size: 11px;
+        font-weight: bold;
+        background: rgba(255,255,255,0.9);
+        padding: 2px 6px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+        white-space: nowrap;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.2s;
     }
-    .loading {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: rgba(255,255,255,0.8);
-        padding: 10px 20px;
-        border-radius: 5px;
-        z-index: 1000;
-        display: none;
+    
+    .state-label:hover {
+        background: #1a237e;
+        color: white;
     }
-    #map-container {
-        position: relative;
+    
+    .bill-detail-table {
+        width: 100%;
+    }
+    
+    .bill-detail-table td {
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .bill-detail-table td:first-child {
+        font-weight: bold;
+        background: #f8f9fa;
+        width: 35%;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <h1 class="h3 mb-4">Geographical Distribution of Bills</h1>
-
-    <!-- Filter Card -->
-    <div class="filter-card">
-        <form id="filter-form" class="row g-3">
-            <div class="col-md-4">
-                <label class="form-label">Bill Status</label>
-                <select name="status" class="form-control" id="status-filter">
-                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Status</option>
-                    <option value="PASSED" {% if status_filter == 'PASSED' %}selected{% endif %}>Passed</option>
-                    <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
-                    <option value="REJECTED" {% if status_filter == 'REJECTED' %}selected{% endif %}>Rejected</option>
-                    <option value="WITHDRAWN" {% if status_filter == 'WITHDRAWN' %}selected{% endif %}>Withdrawn</option>
-                </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label">Year</label>
-                <select name="year" class="form-control" id="year-filter">
-                    <option value="all" {% if year_filter == 'all' %}selected{% endif %}>All Years</option>
-                    {% for year in years %}
-                    <option value="{{ year }}" {% if year_filter == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-4 d-flex align-items-end">
-                <button type="button" class="btn btn-primary w-100" id="update-map">
-                    <i class="fas fa-sync-alt"></i> Update Map
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Map and Stats Row -->
     <div class="row">
-        <div class="col-md-9">
-            <div id="map-container">
-                <div class="loading" id="loading">Updating map...</div>
-                <div id="map"></div>
+        <div class="col-md-8">
+            <div id="map"></div>
+            <div class="legend mt-2">
+                <strong>Legend:</strong>
+                <span style="background: #28a745;"></span> High (30+ bills)
+                <span style="background: #ffc107; margin-left: 15px;"></span> Medium (10-30 bills)
+                <span style="background: #17a2b8; margin-left: 15px;"></span> Low (1-10 bills)
+                <span style="background: #6c757d; margin-left: 15px;"></span> No Bills
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="stats-card">
-                <h5>Statistics</h5>
-                <p><strong>Total Bills:</strong> <span id="total-bills">{{ total_bills }}</span></p>
-                <p><strong>States with Bills:</strong> <span id="states-count">0</span></p>
-                <hr>
-                <h6>Top States:</h6>
-                <ul id="top-states" class="list-unstyled">
-                    <!-- populated by JS -->
-                </ul>
-            </div>
-            <div class="legend">
-                <h6>Party Color Legend</h6>
-                <div class="legend-item"><i style="background:#FF9933;"></i> BJP</div>
-                <div class="legend-item"><i style="background:#0000FF;"></i> INC</div>
-                <div class="legend-item"><i style="background:#28a745;"></i> Independent</div>
-                <div class="legend-item"><i style="background:#808080;"></i> Other/Unknown</div>
-                <p class="small text-muted mt-2">Circle size = number of bills</p>
+        <div class="col-md-4">
+            <div class="info-panel" id="info-panel">
+                <div class="empty-state">
+                    <i class="fas fa-hand-point-up fa-3x mb-3"></i>
+                    <p>Click on any state to view its bills</p>
+                </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<!-- Bill Details Modal -->
+<div class="modal fade" id="billModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">📋 Bill Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="billModalBody">
+                <div class="text-center">Select a bill to view details</div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize map centered on India
-    const map = L.map('map').setView([22.0, 79.0], 5);
+// Initialize map
+const map = L.map('map').setView([22.5, 78.5], 5);
+
+// Set India bounds
+const southWest = L.latLng(6.0, 68.0);
+const northEast = L.latLng(35.5, 97.0);
+map.setMaxBounds(L.latLngBounds(southWest, northEast));
+map.setMinZoom(4);
+map.setMaxZoom(7);
+
+// Base tile layer
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+    subdomains: 'abcd',
+    minZoom: 4,
+    maxZoom: 7
+}).addTo(map);
+
+// State data
+const stateData = {
+    'Karnataka': { short: 'KA', lat: 15.0, lng: 76.5 },
+    'Maharashtra': { short: 'MH', lat: 19.5, lng: 75.5 },
+    'Tamil Nadu': { short: 'TN', lat: 11.0, lng: 78.5 },
+    'Gujarat': { short: 'GJ', lat: 22.5, lng: 71.5 },
+    'Kerala': { short: 'KL', lat: 10.0, lng: 76.5 },
+    'Punjab': { short: 'PB', lat: 31.0, lng: 75.5 },
+    'Haryana': { short: 'HR', lat: 29.5, lng: 76.0 },
+    'Uttar Pradesh': { short: 'UP', lat: 27.5, lng: 80.0 },
+    'Rajasthan': { short: 'RJ', lat: 27.0, lng: 74.0 },
+    'Madhya Pradesh': { short: 'MP', lat: 23.5, lng: 78.0 },
+    'Bihar': { short: 'BR', lat: 25.5, lng: 86.0 },
+    'West Bengal': { short: 'WB', lat: 23.5, lng: 88.0 },
+    'Odisha': { short: 'OR', lat: 20.5, lng: 85.0 },
+    'Telangana': { short: 'TS', lat: 18.0, lng: 79.0 },
+    'Andhra Pradesh': { short: 'AP', lat: 16.0, lng: 80.0 },
+    'Delhi': { short: 'DL', lat: 28.6, lng: 77.2 },
+};
+
+// Create modal instance
+let billModal;
+
+// Function to show bill details
+window.showBillDetail = function(billId) {
+    console.log('🔍 Fetching bill details for bill_id:', billId);
     
-    // Restrict view to roughly India (optional)
-    const southWest = L.latLng(6.0, 68.0);
-    const northEast = L.latLng(37.0, 97.0);
-    const bounds = L.latLngBounds(southWest, northEast);
-    map.setMaxBounds(bounds);
-    map.on('drag', function() {
-        map.panInsideBounds(bounds, { animate: false });
-    });
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(map);
-
-    // Static coordinates for states (from Django)
-    const stateCoords = {{ state_coords|safe }};
-
-    // Party color mapping
-    function getPartyColor(party) {
-        const partyLower = (party || '').toLowerCase();
-        if (partyLower.includes('bjp')) return '#FF9933';
-        if (partyLower.includes('inc') || partyLower.includes('congress')) return '#0000FF';
-        if (partyLower.includes('independent')) return '#28a745';
-        return '#808080'; // default gray
+    const modalBody = document.getElementById('billModalBody');
+    if (!modalBody) {
+        console.error('Modal body not found');
+        return;
     }
-
-    let currentLayerGroup = L.layerGroup().addTo(map);
-    let currentStatesData = [];
-
-    function updateMap() {
-        document.getElementById('loading').style.display = 'block';
-        const status = document.getElementById('status-filter').value;
-        const year = document.getElementById('year-filter').value;
-
-        fetch(`/map/?status=${status}&year=${year}`, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    
+    modalBody.innerHTML = `
+        <div class="text-center">
+            <div class="spinner"></div>
+            <p class="mt-2">Loading bill details...</p>
+        </div>
+    `;
+    
+    // Now using bill_id (KAR-0001, KAR-0003, etc.)
+    fetch(`/api/bill/${billId}/`)
+        .then(response => {
+            console.log('API response status:', response.status);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
         })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('loading').style.display = 'none';
-            currentStatesData = data.states;
-
-            // Update statistics
-            document.getElementById('total-bills').textContent = data.total_bills;
-            const statesWithBills = data.states.filter(s => s.count > 0).length;
-            document.getElementById('states-count').textContent = statesWithBills;
-
-            // Top 5 states by count
-            const topStates = [...data.states].sort((a,b) => b.count - a.count).slice(0,5);
-            const topList = document.getElementById('top-states');
-            topList.innerHTML = '';
-            topStates.forEach(s => {
-                topList.innerHTML += `<li><strong>${s.state}:</strong> ${s.count} bills (${s.party})</li>`;
-            });
-
-            // Clear old circles
-            currentLayerGroup.clearLayers();
-
-            // Add new circles
-            data.states.forEach(state => {
-                if (state.count === 0) return;
-                const coords = stateCoords[state.state] || stateCoords['Other'];
-                const radius = Math.sqrt(state.count) * 30000; // scale factor
-                const color = getPartyColor(state.party);
-
-                const circle = L.circle(coords, {
-                    color: color,
-                    fillColor: color,
-                    fillOpacity: 0.6,
-                    radius: radius,
-                    weight: 2
-                }).addTo(currentLayerGroup);
-
-                // Bind popup with state info
-                circle.bindPopup(`
-                    <b>${state.state}</b><br>
-                    Bills: ${state.count}<br>
-                    Dominant Party: ${state.party}
-                `);
-
-                // On click, go to bills list filtered by state
-                circle.on('click', function() {
-                    window.location.href = `/bills/?search=${encodeURIComponent(state.state)}`;
-                });
-            });
+        .then(bill => {
+            console.log('Bill data received:', bill);
+            
+            modalBody.innerHTML = `
+                <table class="table table-bordered">
+                    <tr>
+                        <th width="35%">Bill ID</th>
+                        <td>${bill.bill_id || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <th>Title</th>
+                        <td>${bill.title || 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <th>State</th>
+                        <td>${bill.state || 'Karnataka'}</td>
+                    </tr>
+                    <tr>
+                        <th>Year</th>
+                        <td>${bill.introduction_date ? bill.introduction_date.split('-')[0] : 'N/A'}</td>
+                    </tr>
+                    <tr>
+                        <th>Source</th>
+                        <td>${bill.source || 'STATE_BILL'}</td>
+                    </tr>
+                    <tr>
+                        <th>Status</th>
+                        <td><span class="badge bg-warning">${bill.status || 'PENDING'}</span></td>
+                    </tr>
+                </table>
+            `;
+            
+            const modalElement = document.getElementById('billModal');
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
         })
         .catch(error => {
-            document.getElementById('loading').style.display = 'none';
-            console.error('Error updating map:', error);
+            console.error('Error fetching bill:', error);
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Error loading bill: ${error.message}
+                </div>
+            `;
         });
-    }
+};
+// Function to show bills for a state
+window.showStateBills = function(stateName) {
+    console.log('📋 Loading bills for state:', stateName);
+    
+    const infoPanel = document.getElementById('info-panel');
+    if (!infoPanel) return;
+    
+    infoPanel.innerHTML = `
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Loading bills for ${stateName}...</p>
+        </div>
+    `;
+    
+    fetch(`/api/state-bills/${stateName}/`)
+        .then(response => {
+            if (!response.ok) throw new Error('API error');
+            return response.json();
+        })
+        .then(data => {
+            console.log('✅ Received bills:', data.count);
+            
+            if (data.bills && data.bills.length > 0) {
+                // FIX: Use bill.bill_id (KAR-0001) instead of bill.id (UUID)
+                const billsHtml = data.bills.map(bill => `
+                    <div class="bill-item" onclick="showBillDetail('${bill.bill_id}')">
+                        <div class="bill-title">📄 ${bill.title.substring(0, 80)}${bill.title.length > 80 ? '...' : ''}</div>
+                        <div class="bill-year">📅 Year: ${bill.introduction_date ? bill.introduction_date.split('-')[0] : 'N/A'}</div>
+                    </div>
+                `).join('');
+                
+                infoPanel.innerHTML = `
+                    <div class="state-name-title">📌 ${stateName}</div>
+                    <div class="bill-count-badge">
+                        <div class="bill-count-number">${data.count}</div>
+                        <div>State Legislative Bills</div>
+                    </div>
+                    <div class="bill-list">${billsHtml}</div>
+                    <div class="mt-2 small text-muted">⬅️ Click on any bill to view details</div>
+                `;
+            } else {
+                infoPanel.innerHTML = '<div class="empty-state">No bills found for this state</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            infoPanel.innerHTML = '<div class="empty-state">Error loading bills. Please try again.</div>';
+        });
+};
 
-    // Initial load
-    updateMap();
-
-    // Update on button click or filter change
-    document.getElementById('update-map').addEventListener('click', updateMap);
-    document.getElementById('status-filter').addEventListener('change', updateMap);
-    document.getElementById('year-filter').addEventListener('change', updateMap);
-});
+// Fetch state counts and draw map
+fetch('/api/state-bill-counts/')
+    .then(response => response.json())
+    .then(states => {
+        const billCounts = {};
+        states.forEach(s => { billCounts[s.name] = s.count; });
+        
+        for (const [stateName, info] of Object.entries(stateData)) {
+            const count = billCounts[stateName] || 0;
+            
+            let color = '#6c757d';
+            if (count >= 30) color = '#28a745';
+            else if (count >= 10) color = '#ffc107';
+            else if (count >= 1) color = '#17a2b8';
+            
+            let radius = 12;
+            if (count > 0) radius = 12 + Math.min(Math.log(count) * 5, 23);
+            
+            // Circle
+            const circle = L.circleMarker([info.lat, info.lng], {
+                radius: radius,
+                fillColor: color,
+                color: '#fff',
+                weight: 2,
+                fillOpacity: 0.8
+            }).addTo(map);
+            
+            circle.on('click', () => showStateBills(stateName));
+            
+            // Label
+            const label = L.marker([info.lat, info.lng - 0.35], {
+                icon: L.divIcon({
+                    html: `<div class="state-label">${info.short}</div>`,
+                    iconSize: [35, 20]
+                })
+            }).addTo(map);
+            
+            label.on('click', () => showStateBills(stateName));
+        }
+    })
+    .catch(error => console.error('Error loading map:', error));
 </script>
 {% endblock %}
-// In the updateMap() function, inside the loop over data.states
-circle.on('click', function() {
-    window.location.href = `/bills/?state=${encodeURIComponent(state.state)}`;
-});

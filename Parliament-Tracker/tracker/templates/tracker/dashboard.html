@@ -14,8 +14,7 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Total Bills</div>
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Bills</div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_bills }}</div>
                         </div>
                         <div class="col-auto">
@@ -31,8 +30,7 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Passed Bills</div>
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Passed Bills</div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ passed_bills }}</div>
                         </div>
                         <div class="col-auto">
@@ -48,8 +46,7 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Pending Bills</div>
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Pending Bills</div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending_bills }}</div>
                         </div>
                         <div class="col-auto">
@@ -65,8 +62,7 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Rajya Sabha Bills</div>
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Rajya Sabha Bills</div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">{{ rajyasabha_bills }}</div>
                         </div>
                         <div class="col-auto">
@@ -78,7 +74,7 @@
         </div>
     </div>
 
-    <!-- Recent Bills -->
+    <!-- Recent Bills Table -->
     <div class="row">
         <div class="col-12">
             <div class="card shadow mb-4">
@@ -88,38 +84,36 @@
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-bordered" width="100%" cellspacing="0">
+                        <table class="table table-bordered">
                             <thead>
                                 <tr>
                                     <th>Bill ID</th>
-                                    <th>Bill Number</th>
                                     <th>Title</th>
                                     <th>House</th>
                                     <th>Status</th>
-                                    <th>Introduced By</th>
-                                    <th>Party</th>
-                                    <th>Date</th>
+                                    <th>Introduced Date</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for bill in recent_bills %}
                                 <tr>
                                     <td><a href="{% url 'bill_detail' bill.id %}">{{ bill.bill_id }}</a></td>
-                                    <td>{{ bill.bill_number|default:"-" }}</td>
-                                    <td>{{ bill.title|truncatechars:50 }}</td>
-                                    <td>{{ bill.get_house_display|default:bill.house }}</td>
+                                    <td style="max-width: 400px;">
+                                        <a href="{% url 'bill_detail' bill.id %}">
+                                            {{ bill.title|truncatechars:80 }}
+                                        </a>
+                                    </a>
+                                    <td>{{ bill.get_house_display|default:bill.house }}</a>
                                     <td>
                                         <span class="badge bg-{{ bill.status_color }}">
                                             {{ bill.get_status_display|default:bill.status }}
                                         </span>
-                                    </td>
-                                    <td>{{ bill.introduced_by|default:"-" }}</td>
-                                    <td>{{ bill.introduced_by_party|default:"-" }}</td>
-                                    <td>{{ bill.introduction_date|date:"d M Y"|default:"-" }}</td>
+                                    </a>
+                                    <td>{{ bill.introduction_date|date:"d M Y"|default:"-" }}</a>
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="8" class="text-center">No bills found</td>
+                                    <td colspan="5" class="text-center">No bills found</a>
                                 </tr>
                                 {% endfor %}
                             </tbody>

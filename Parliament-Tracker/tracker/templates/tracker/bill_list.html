@@ -15,18 +15,18 @@
         <div class="card-body">
             <form method="get" id="filter-form">
                 <div class="row">
-                    <div class="col-md-6 mb-3">
+                    <div class="col-md-4 mb-3">
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-search"></i></span>
                             <input type="text" 
                                    class="form-control" 
                                    name="search" 
                                    id="search-input"
-                                   placeholder="Search by bill ID, title, number, or introducer..."
+                                   placeholder="Search by bill ID or title..."
                                    value="{{ search_query }}">
                         </div>
                     </div>
-                    <div class="col-md-2 mb-3">
+                    <div class="col-md-3 mb-3">
                         <select name="house" class="form-control" id="house-filter">
                             <option value="">All Houses</option>
                             {% for house in houses %}
@@ -36,7 +36,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-2 mb-3">
+                    <div class="col-md-3 mb-3">
                         <select name="status" class="form-control" id="status-filter">
                             <option value="">All Status</option>
                             {% for status in statuses %}
@@ -47,7 +47,7 @@
                         </select>
                     </div>
                     <div class="col-md-2 mb-3">
-                        <button type="submit" class="btn btn-primary w-100" id="search-button">
+                        <button type="submit" class="btn btn-primary w-100">
                             <i class="fas fa-search"></i> Search
                         </button>
                     </div>
@@ -77,13 +77,12 @@
                     <thead class="table-light">
                         <tr>
                             <th>Bill ID</th>
-                            <th>Bill Number</th>
                             <th>Title</th>
                             <th>House</th>
+                            <th>Passed in LS</th>
+                            <th>Passed in RS</th>
                             <th>Status</th>
-                            <th>Introduced By</th>
-                            <th>Party</th>
-                            <th>Date</th>
+                            <th>Introduced Date</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -91,26 +90,59 @@
                         {% for bill in page_obj %}
                         <tr>
                             <td><strong>{{ bill.bill_id }}</strong></td>
-                            <td>{{ bill.bill_number|default:"-" }}</td>
-                            <td><a href="{% url 'bill_detail' bill.id %}">{{ bill.title|truncatechars:80 }}</a></td>
-                            <td><span class="badge bg-info text-white">{{ bill.get_house_display|default:bill.house }}</span></td>
+                            <td>
+                                <a href="{% url 'bill_detail' bill.id %}">
+                                    {{ bill.title|truncatechars:80 }}
+                                </a>
+                              </a>
+                            <td>
+                                <span class="badge bg-info text-white">
+                                    {{ bill.get_house_display|default:bill.house }}
+                                </span>
+                            </a>
+                            
+                            <!-- Passed in LS -->
+                            <td>
+                                {% if bill.passed_in_ls_date %}
+                                    <span class="badge bg-success">{{ bill.passed_in_ls_date|date:"d M Y" }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Pending</span>
+                                {% endif %}
+                            </a>
+                            
+                            <!-- Passed in RS -->
+                            <td>
+                                {% if bill.passed_in_rs_date %}
+                                    <span class="badge bg-success">{{ bill.passed_in_rs_date|date:"d M Y" }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Pending</span>
+                                {% endif %}
+                            </a>
+                            
+                            <!-- Status -->
                             <td>
                                 <span class="badge bg-{{ bill.status_color }}">
                                     {{ bill.get_status_display|default:bill.status }}
                                 </span>
-                            </td>
-                            <td>{{ bill.introduced_by|default:"-"|truncatechars:30 }}</td>
-                            <td>{{ bill.introduced_by_party|default:"-" }}</td>
-                            <td>{{ bill.introduction_date|date:"d M Y"|default:"-" }}</td>
+                            </a>
+                            
+                            <!-- Introduced Date -->
+                            <td>{{ bill.introduction_date|date:"d M Y"|default:"-" }}</a>
+                            
+                            <!-- Actions -->
                             <td>
                                 <a href="{% url 'bill_detail' bill.id %}" class="btn btn-sm btn-info" title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                            </td>
+                            </a>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="9" class="text-center py-4">No bills found</td>
+                            <td colspan="8" class="text-center py-4">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3 d-block"></i>
+                                <h5>No bills found</h5>
+                                <p class="text-muted">Try adjusting your search or filter criteria</p>
+                            </a>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -150,11 +182,21 @@
 </div>
 
 <script>
+// Auto-submit on filter change
 document.getElementById('house-filter')?.addEventListener('change', function() {
     document.getElementById('filter-form').submit();
 });
 document.getElementById('status-filter')?.addEventListener('change', function() {
     document.getElementById('filter-form').submit();
+});
+
+// Debounced search
+let searchTimeout;
+document.getElementById('search-input')?.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        document.getElementById('filter-form').submit();
+    }, 500);
 });
 </script>
 {% endblock %}

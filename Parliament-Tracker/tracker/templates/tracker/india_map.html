@@ -1,0 +1,214 @@
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block title %}India Map - State Bills{% endblock %}
+
+{% block extra_css %}
+<style>
+    #map {
+        height: 600px;
+        width: 100%;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .info-panel {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        max-width: 300px;
+    }
+    .state-name {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #1a237e;
+    }
+    .bill-count {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #28a745;
+    }
+    .bill-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .bill-item {
+        padding: 8px;
+        border-bottom: 1px solid #eee;
+        cursor: pointer;
+    }
+    .bill-item:hover {
+        background-color: #f5f5f5;
+    }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-ajax/2.1.0/leaflet.ajax.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-4">India Map - State Bills</h1>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div id="map"></div>
+        </div>
+        <div class="col-md-4">
+            <div class="info-panel" id="info-panel">
+                <div class="text-center">
+                    <i class="fas fa-hand-pointer fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Click on any state to view its bills</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bill Details Modal -->
+<div class="modal fade" id="billModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="billModalTitle">Bill Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="billModalBody">
+                Loading...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// India map coordinates
+const map = L.map('map').setView([22.0, 78.0], 5);
+
+// Add tile layer
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
+}).addTo(map);
+
+// State data with coordinates (center points)
+const stateData = {
+    'Karnataka': { lat: 12.97, lng: 77.59, bills: 0 },
+    'Maharashtra': { lat: 18.52, lng: 72.87, bills: 0 },
+    'Tamil Nadu': { lat: 13.08, lng: 80.27, bills: 0 },
+    'Gujarat': { lat: 23.02, lng: 72.57, bills: 0 },
+    'Kerala': { lat: 8.52, lng: 76.93, bills: 0 },
+    'Punjab': { lat: 30.73, lng: 76.78, bills: 0 },
+    'West Bengal': { lat: 22.57, lng: 88.36, bills: 0 },
+    'Delhi': { lat: 28.61, lng: 77.23, bills: 0 },
+    'Uttar Pradesh': { lat: 26.84, lng: 80.94, bills: 0 },
+    'Rajasthan': { lat: 26.91, lng: 75.78, bills: 0 },
+    'Madhya Pradesh': { lat: 23.25, lng: 77.41, bills: 0 },
+    'Bihar': { lat: 25.59, lng: 85.13, bills: 0 },
+    'Odisha': { lat: 20.29, lng: 85.82, bills: 0 },
+    'Telangana': { lat: 17.38, lng: 78.48, bills: 0 },
+    'Andhra Pradesh': { lat: 15.91, lng: 79.74, bills: 0 },
+    'Haryana': { lat: 29.06, lng: 76.46, bills: 0 },
+    'Jharkhand': { lat: 23.61, lng: 85.27, bills: 0 },
+    'Chhattisgarh': { lat: 21.25, lng: 81.63, bills: 0 },
+    'Assam': { lat: 26.20, lng: 92.93, bills: 0 },
+    'Uttarakhand': { lat: 30.07, lng: 79.02, bills: 0 },
+    'Himachal Pradesh': { lat: 31.10, lng: 77.17, bills: 0 },
+    'Goa': { lat: 15.30, lng: 74.12, bills: 0 },
+};
+
+// Fetch bill counts from server
+// In india_map.html, update the fetch URL
+fetch('/api/state-bill-counts/')
+    .then(response => response.json())
+    .then(states => {
+        // This now only returns STATE_BILL bills
+        states.forEach(state => {
+            if (stateCoordinates[state.name]) {
+                const coords = stateCoordinates[state.name];
+                const radius = Math.sqrt(state.count) * 15000;
+                
+                let color = '#17a2b8';
+                if (state.count > 30) color = '#28a745';
+                else if (state.count > 10) color = '#ffc107';
+                
+                const circle = L.circle([coords.lat, coords.lng], {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.6,
+                    radius: radius,
+                    weight: 2
+                }).addTo(map);
+                
+                circle.bindPopup(`
+                    <div class="text-center">
+                        <strong>${state.name}</strong><br>
+                        <span class="badge bg-success" style="font-size:1.2rem">${state.count} State Bills</span>
+                        <hr>
+                        <button class="btn btn-sm btn-primary" onclick="showStateBills('${state.name}')">
+                            View State Bills
+                        </button>
+                    </div>
+                `);
+            }
+        });
+    });
+        
+        // Add circles to map
+        for (const [stateName, info] of Object.entries(stateData)) {
+            if (info.bills > 0) {
+                const radius = Math.sqrt(info.bills) * 20000;
+                const color = info.bills > 20 ? '#28a745' : info.bills > 10 ? '#ffc107' : '#17a2b8';
+                
+                const circle = L.circle([info.lat, info.lng], {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.6,
+                    radius: radius,
+                    weight: 2
+                }).addTo(map);
+                
+                circle.bindPopup(`
+                    <div class="text-center">
+                        <strong>${stateName}</strong><br>
+                        <span class="badge bg-success fs-5">${info.bills} Bills</span>
+                        <br>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="showStateBills('${stateName}')">
+                            View Bills
+                        </button>
+                    </div>
+                `);
+                
+                circle.on('click', () => showStateBills(stateName));
+            }
+        }
+    
+
+// Function to show bills for a clicked state
+// Replace the showStateBills function in india_map.html
+function showStateBills(stateName) {
+    // Redirect to a dedicated state bills page instead of showing in sidebar
+    window.location.href = `/state-bills/${stateName}/`;
+}
+
+// Function to show bill details in modal
+function showBillDetails(billId) {
+    fetch(`/api/bill/${billId}/`)
+        .then(response => response.json())
+        .then(bill => {
+            document.getElementById('billModalTitle').innerHTML = bill.title;
+            document.getElementById('billModalBody').innerHTML = `
+                <table class="table table-bordered">
+                    <tr><th>Bill ID</th><td>${bill.bill_id}</td></tr>
+                    <tr><th>State</th><td>${bill.state || 'Central'}</td></tr>
+                    <tr><th>Introduction Date</th><td>${bill.introduction_date}</td></tr>
+                    <tr><th>Source</th><td>${bill.source}</td></tr>
+                    <tr><th>Status</th><td>${bill.status}</td></tr>
+                </table>
+            `;
+            new bootstrap.Modal(document.getElementById('billModal')).show();
+        });
+}
+</script>
+{% endblock %}

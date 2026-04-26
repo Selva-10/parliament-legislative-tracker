@@ -68,7 +68,7 @@
         border-radius: 10px;
         background-color: #eaecf4;
         overflow: hidden;
-        min-width: 100px;
+        min-width: 80px;
     }
     .progress-bar {
         border-radius: 10px;
@@ -80,32 +80,65 @@
         white-space: nowrap;
     }
 
-    /* Column widths for success tables */
-    .ministry-table th:nth-child(1) { width: 40%; }
-    .ministry-table th:nth-child(2) { width: 15%; }
-    .ministry-table th:nth-child(3) { width: 15%; }
-    .ministry-table th:nth-child(4) { width: 30%; }
-
-    .party-table th:nth-child(1) { width: 40%; }
-    .party-table th:nth-child(2) { width: 15%; }
-    .party-table th:nth-child(3) { width: 15%; }
-    .party-table th:nth-child(4) { width: 30%; }
-
-    /* Monthly table column widths */
-    .monthly-table th:nth-child(1) { width: 12%; }
-    .monthly-table th:nth-child(2) { width: 8%; }
-    .monthly-table th:nth-child(3) { width: 8%; }
-    .monthly-table th:nth-child(4) { width: 8%; }
-    .monthly-table th:nth-child(5) { width: 6%; }
-    .monthly-table th:nth-child(6) { width: 6%; }
-    .monthly-table th:nth-child(7) { width: 6%; }
-    .monthly-table th:nth-child(8) { width: 46%; }
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .year-wise-row {
+        background-color: #f8f9fc;
+    }
+    
+    .year-wise-cell {
+        padding-left: 30px !important;
+    }
+    
+    .ministry-main-row {
+        background-color: white;
+        font-weight: bold;
+    }
+    
+    .expand-icon {
+        cursor: pointer;
+        display: inline-block;
+        width: 20px;
+        text-align: center;
+        margin-right: 8px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <h1 class="h3 mb-4">Analytics Dashboard</h1>
+
+    <!-- Year Filter Card -->
+    <div class="filter-card">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label for="year" class="form-label fw-bold mb-1">Filter by Year</label>
+                <select name="year" id="year" class="form-select">
+                    <option value="all" {% if selected_year == 'all' %}selected{% endif %}>All Years (2019-2026)</option>
+                    {% for year in years %}
+                    <option value="{{ year }}" {% if selected_year|stringformat:"s" == year|stringformat:"s" %}selected{% endif %}>{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter"></i> Apply Filter
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="{% url 'analytics' %}" class="btn btn-secondary w-100">
+                    <i class="fas fa-undo"></i> Reset
+                </a>
+            </div>
+        </form>
+    </div>
 
     <!-- Stats Cards -->
     <div class="row">
@@ -159,9 +192,9 @@
         </div>
     </div>
 
-    <!-- Second row: ministry and party distribution -->
+    <!-- Second row: ministry distribution -->
     <div class="row">
-        <div class="col-xl-6">
+        <div class="col-xl-12">
             <div class="chart-container">
                 <div class="chart-title">
                     <i class="fas fa-building me-2 text-warning"></i>Top Ministries by Bill Count
@@ -169,30 +202,27 @@
                 <canvas id="ministryChart"></canvas>
             </div>
         </div>
-        <div class="col-xl-6">
-            <div class="chart-container">
-                <div class="chart-title">
-                    <i class="fas fa-users me-2 text-info"></i>Bills by Party
-                </div>
-                <canvas id="partyChart"></canvas>
-            </div>
-        </div>
     </div>
 
-    <!-- Success rate tables (side by side) -->
+    <!-- Ministry Success Rate Table with Year-wise Breakdown -->
     <div class="row">
-        <div class="col-xl-6">
+        <div class="col-xl-12">
             <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0">Ministry Success Rate</h5>
+                    <h5 class="card-title mb-0">
+                        Ministry Success Rate
+                        {% if selected_year != 'all' %}
+                        <small class="text-white-50">({{ selected_year }})</small>
+                        {% endif %}
+                    </h5>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-analytics ministry-table">
+                        <table class="table table-analytics ministry-table" id="ministry-table">
                             <thead>
                                 <tr>
                                     <th>Ministry</th>
-                                    <th>Total</th>
+                                    <th>Total Bills</th>
                                     <th>Passed</th>
                                     <th>Success Rate</th>
                                 </tr>
@@ -205,33 +235,9 @@
                 </div>
             </div>
         </div>
-        <div class="col-xl-6">
-            <div class="card mb-4">
-                <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0">Party Success Rate</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-analytics party-table">
-                            <thead>
-                                <tr>
-                                    <th>Party</th>
-                                    <th>Total</th>
-                                    <th>Passed</th>
-                                    <th>Success Rate</th>
-                                </tr>
-                            </thead>
-                            <tbody id="party-success-table">
-                                <!-- Filled by JS -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <!-- Monthly detailed table -->
+    <!-- Monthly Bill Statistics Table -->
     <div class="row mt-4">
         <div class="col-12">
             <div class="card">
@@ -246,12 +252,8 @@
                             <thead>
                                 <tr>
                                     <th>Month</th>
-                                    <th>Total</th>
-                                    <th>Lok Sabha</th>
-                                    <th>Rajya Sabha</th>
+                                    <th>Total Bills</th>
                                     <th>Passed</th>
-                                    <th>Pending</th>
-                                    <th>Rejected</th>
                                     <th>Success Rate</th>
                                 </tr>
                             </thead>
@@ -273,160 +275,180 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusData = {{ status_counts|safe }};
     const houseData = {{ house_counts|safe }};
     const ministryData = {{ ministry_counts|safe }};
-    const partyData = {{ party_counts|safe }};
     const ministrySuccess = {{ ministry_success|safe }};
-    const partySuccess = {{ party_success|safe }};
     const monthlyData = {{ monthly_data|safe }};
+    const allYears = {{ all_years|safe }};
 
     // Status Chart
-    new Chart(document.getElementById('statusChart'), {
-        type: 'doughnut',
-        data: {
-            labels: statusData.map(item => item.status || 'Unknown'),
-            datasets: [{
-                data: statusData.map(item => item.count),
-                backgroundColor: ['#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8'],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom' } }
-        }
-    });
-
-    // House Chart
-    new Chart(document.getElementById('houseChart'), {
-        type: 'bar',
-        data: {
-            labels: houseData.map(item => item.house),
-            datasets: [{
-                label: 'Number of Bills',
-                data: houseData.map(item => item.count),
-                backgroundColor: ['#4e73df', '#1cc88a', '#f6c23e'],
-                borderRadius: 5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
-    });
-
-    // Ministry Chart
-    new Chart(document.getElementById('ministryChart'), {
-        type: 'bar',
-        data: {
-            labels: ministryData.map(item => item.ministry.length > 20 ? item.ministry.substring(0,20)+'...' : item.ministry),
-            datasets: [{
-                label: 'Bills',
-                data: ministryData.map(item => item.count),
-                backgroundColor: '#fd7e14',
-                borderRadius: 5
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
-    });
-
-    // Party Chart
-    new Chart(document.getElementById('partyChart'), {
-        type: 'bar',
-        data: {
-            labels: partyData.map(item => item.introduced_by_party),
-            datasets: [{
-                label: 'Bills',
-                data: partyData.map(item => item.count),
-                backgroundColor: '#20c997',
-                borderRadius: 5
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
-    });
-
-    // Ministry success table
-    const ministryTable = document.getElementById('ministry-success-table');
-    if (ministrySuccess.length) {
-        ministryTable.innerHTML = ministrySuccess.map(m => `
-            <tr>
-                <td>${m.ministry}</td>
-                <td>${m.total}</td>
-                <td>${m.passed}</td>
-                <td>
-                    <div class="progress">
-                        <div class="progress-bar" style="width: ${m.success_rate}%">
-                            ${m.success_rate}%
-                        </div>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
-    } else {
-        ministryTable.innerHTML = '<tr><td colspan="4" class="text-center">No data</td></tr>';
+    if (document.getElementById('statusChart')) {
+        new Chart(document.getElementById('statusChart'), {
+            type: 'doughnut',
+            data: {
+                labels: statusData.map(item => item.status || 'Unknown'),
+                datasets: [{
+                    data: statusData.map(item => item.count),
+                    backgroundColor: ['#28a745', '#ffc107', '#dc3545', '#6c757d', '#17a2b8'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
     }
 
-    // Party success table
-    const partyTable = document.getElementById('party-success-table');
-    if (partySuccess.length) {
-        partyTable.innerHTML = partySuccess.map(p => `
-            <tr>
-                <td>${p.party}</td>
-                <td>${p.total}</td>
-                <td>${p.passed}</td>
-                <td>
-                    <div class="progress">
-                        <div class="progress-bar" style="width: ${p.success_rate}%">
-                            ${p.success_rate}%
+    // House Chart
+    if (document.getElementById('houseChart')) {
+        new Chart(document.getElementById('houseChart'), {
+            type: 'bar',
+            data: {
+                labels: houseData.map(item => item.house),
+                datasets: [{
+                    label: 'Number of Bills',
+                    data: houseData.map(item => item.count),
+                    backgroundColor: ['#4e73df', '#1cc88a', '#f6c23e'],
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
+
+    // Ministry Chart
+    if (document.getElementById('ministryChart')) {
+        new Chart(document.getElementById('ministryChart'), {
+            type: 'bar',
+            data: {
+                labels: ministryData.map(item => item.ministry.length > 20 ? item.ministry.substring(0,20)+'...' : item.ministry),
+                datasets: [{
+                    label: 'Bills',
+                    data: ministryData.map(item => item.count),
+                    backgroundColor: '#fd7e14',
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+            }
+        });
+    }
+
+    // Ministry success table with year-wise breakdown (expandable)
+    const ministryTable = document.getElementById('ministry-success-table');
+    if (ministryTable && ministrySuccess.length) {
+        let tableHtml = '';
+        
+        ministrySuccess.forEach(ministry => {
+            // Main ministry row
+            tableHtml += `
+                <tr class="ministry-main-row" style="cursor: pointer;" onclick="toggleYearWise('${ministry.ministry.replace(/'/g, "\\'")}')">
+                    <td>
+                        <span class="expand-icon" id="icon-${ministry.ministry.replace(/[^a-zA-Z0-9]/g, '_')}">▶</span>
+                        <strong>${ministry.ministry}</strong>
+                    </td>
+                    <td><strong>${ministry.total}</strong></td>
+                    <td><strong>${ministry.passed}</strong></td>
+                    <td>
+                        <div class="progress">
+                            <div class="progress-bar" style="width: ${ministry.success_rate}%">
+                                ${ministry.success_rate}%
+                            </div>
                         </div>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
-    } else {
-        partyTable.innerHTML = '<tr><td colspan="4" class="text-center">No data</td></tr>';
+                    </td>
+                </tr>
+            `;
+            
+            // Year-wise breakdown rows (hidden initially)
+            if (ministry.year_wise && ministry.year_wise.length > 0) {
+                tableHtml += `<tr id="yearwise-${ministry.ministry.replace(/[^a-zA-Z0-9]/g, '_')}" style="display: none;">`;
+                tableHtml += `<td colspan="4" style="padding: 0;">`;
+                tableHtml += `<table style="width: 100%; margin: 0; background-color: #f8f9fc;">`;
+                tableHtml += `<tr style="background-color: #e9ecef;">
+                                <th style="width: 40%; padding: 8px 8px 8px 30px;">Year</th>
+                                <th style="width: 20%; padding: 8px;">Bills</th>
+                                <th style="width: 20%; padding: 8px;">Passed</th>
+                                <th style="width: 20%; padding: 8px;">Success Rate</th>
+                              </tr>`;
+                
+                ministry.year_wise.forEach(yearData => {
+                    tableHtml += `
+                        <tr>
+                            <td style="padding: 8px 8px 8px 30px;">${yearData.year}</td>
+                            <td style="padding: 8px;">${yearData.total}</td>
+                            <td style="padding: 8px;">${yearData.passed}</td>
+                            <td style="padding: 8px;">
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: ${yearData.success_rate}%">
+                                        ${yearData.success_rate}%
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                tableHtml += `</table>`;
+                tableHtml += `</td>`;
+                tableHtml += `</tr>`;
+            }
+        });
+        
+        ministryTable.innerHTML = tableHtml;
+    } else if (ministryTable) {
+        ministryTable.innerHTML = '<tr><td colspan="4" class="text-center">No data</td></tr>';
     }
 
     // Monthly table
     const monthlyTable = document.getElementById('monthly-table');
-    if (monthlyData.length) {
+    if (monthlyTable && monthlyData.length) {
         monthlyTable.innerHTML = monthlyData.map(m => {
             const successRate = m.total > 0 ? ((m.passed / m.total) * 100).toFixed(1) : 0;
             return `
-                <tr>
+                <table>
                     <td><strong>${m.month}</strong></td>
-                    <td>${m.total}</td>
-                    <td>${m.ls_count}</td>
-                    <td>${m.rs_count}</td>
-                    <td>${m.passed}</td>
-                    <td>${m.pending}</td>
-                    <td>${m.rejected}</td>
+                    <td>${m.total}</a>
+                    <td>${m.passed}</a>
                     <td>
                         <div class="progress">
                             <div class="progress-bar" style="width: ${successRate}%">
                                 ${successRate}%
                             </div>
                         </div>
-                    </td>
+                    </a>
                 </tr>
             `;
         }).join('');
-    } else {
-        monthlyTable.innerHTML = '<tr><td colspan="8" class="text-center">No data</td></tr>';
+    } else if (monthlyTable) {
+        monthlyTable.innerHTML = '<tr><td colspan="4" class="text-center">No data</td></tr>';
     }
 });
+
+// Function to toggle year-wise breakdown visibility
+function toggleYearWise(ministryName) {
+    const safeId = ministryName.replace(/[^a-zA-Z0-9]/g, '_');
+    const row = document.getElementById(`yearwise-${safeId}`);
+    const icon = document.getElementById(`icon-${safeId}`);
+    
+    if (row) {
+        if (row.style.display === 'none') {
+            row.style.display = 'table-row';
+            if (icon) icon.innerHTML = '▼';
+        } else {
+            row.style.display = 'none';
+            if (icon) icon.innerHTML = '▶';
+        }
+    }
+}
 </script>
 {% endblock %}
