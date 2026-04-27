@@ -8,62 +8,63 @@
     <h1 class="h3 mb-4">Bills Tracker</h1>
     
     <!-- Search and Filter Section -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Search & Filter Bills</h6>
-        </div>
-        <div class="card-body">
-            <form method="get" id="filter-form">
-                <div class="row">
-                    <div class="col-md-4 mb-3">
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-search"></i></span>
-                            <input type="text" 
-                                   class="form-control" 
-                                   name="search" 
-                                   id="search-input"
-                                   placeholder="Search by bill ID or title..."
-                                   value="{{ search_query }}">
-                        </div>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <select name="house" class="form-control" id="house-filter">
-                            <option value="">All Houses</option>
-                            {% for house in houses %}
-                                <option value="{{ house }}" {% if selected_house == house %}selected{% endif %}>
-                                    {{ house }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <select name="status" class="form-control" id="status-filter">
-                            <option value="">All Status</option>
-                            {% for status in statuses %}
-                                <option value="{{ status }}" {% if selected_status == status %}selected{% endif %}>
-                                    {{ status|title }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-2 mb-3">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-search"></i> Search
-                        </button>
+     <!-- Search and Filter Section -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Search & Filter Bills</h6>
+    </div>
+    <div class="card-body">
+        <form method="get" id="filter-form">
+            <div class="row">
+                <div class="col-md-5 mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" 
+                               class="form-control" 
+                               name="search" 
+                               id="search-input"
+                               placeholder="Search by bill ID or title..."
+                               value="{{ search_query }}">
                     </div>
                 </div>
-            </form>
-            
-            <div class="mt-2">
-                <small class="text-muted">Found {{ total_count }} bills</small>
-                {% if search_query or selected_house or selected_status %}
-                <a href="{% url 'bill_list' %}" class="btn btn-sm btn-secondary ms-2">
-                    <i class="fas fa-times"></i> Clear Filters
-                </a>
-                {% endif %}
+                <div class="col-md-3 mb-3">
+                    <label class="form-label small text-muted">House</label>
+                    <select name="house" class="form-control" id="house-filter">
+                        <option value="">All Houses</option>
+                        <option value="LOK_SABHA" {% if selected_house == 'LOK_SABHA' %}selected{% endif %}>Lok Sabha</option>
+                        <option value="RAJYA_SABHA" {% if selected_house == 'RAJYA_SABHA' %}selected{% endif %}>Rajya Sabha</option>
+                        <option value="BOTH" {% if selected_house == 'BOTH' %}selected{% endif %}>Both Houses</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <label class="form-label small text-muted">Status</label>
+                    <select name="status" class="form-control" id="status-filter">
+                        <option value="">All Status</option>
+                        <option value="PASSED" {% if selected_status == 'PASSED' %}selected{% endif %}>Passed</option>
+                        <option value="PENDING" {% if selected_status == 'PENDING' %}selected{% endif %}>Pending</option>
+                        <option value="REJECTED" {% if selected_status == 'REJECTED' %}selected{% endif %}>Rejected</option>
+                        <option value="WITHDRAWN" {% if selected_status == 'WITHDRAWN' %}selected{% endif %}>Withdrawn</option>
+                        <option value="LAPSED" {% if selected_status == 'LAPSED' %}selected{% endif %}>Lapsed</option>
+                    </select>
+                </div>
+                <div class="col-md-1 mb-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
             </div>
+        </form>
+        
+        <div class="mt-2">
+            <small class="text-muted">Found {{ total_count }} bills</small>
+            {% if search_query or selected_house or selected_status %}
+            <a href="{% url 'bill_list' %}" class="btn btn-sm btn-secondary ms-2">
+                <i class="fas fa-times"></i> Clear Filters
+            </a>
+            {% endif %}
         </div>
     </div>
+</div>
     
     <!-- Bills Table -->
     <div class="card shadow mb-4">

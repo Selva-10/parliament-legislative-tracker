@@ -1,27 +1,48 @@
 {% extends 'tracker/base.html' %}
 {% load static %}
 
-{% block title %}download Bills - Parliament Tracker{% endblock %}
+{% block title %}Download Bills - Parliament Tracker{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h1 class="h3 mb-4">download Bills</h1>
+    <h1 class="h3 mb-4">Download Bills</h1>
+    
     <div class="card">
         <div class="card-body">
-            <form method="get" action="{% url 'download_bills' %}">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label>Start Date</label>
-                        <input type="date" name="start_date" class="form-control">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label>End Date</label>
-                        <input type="date" name="end_date" class="form-control">
+            <form method="get" action="{% url 'download_bills' %}" id="download-form" target="_blank">
+                <!-- Bill Type Selection -->
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Bill Type</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="bill_type" id="bill_type_all" value="all" checked autocomplete="off">
+                            <label class="btn btn-outline-primary" for="bill_type_all">All Bills</label>
+                            
+                            <input type="radio" class="btn-check" name="bill_type" id="bill_type_central" value="central" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="bill_type_central">Central Bills</label>
+                            
+                            <input type="radio" class="btn-check" name="bill_type" id="bill_type_state" value="state" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="bill_type_state">State Bills</label>
+                        </div>
                     </div>
                 </div>
+                
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label>Ministry</label>
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" placeholder="DD/MM/YYYY">
+                        <small class="text-muted">Filter bills introduced on or after this date</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-control" placeholder="DD/MM/YYYY">
+                        <small class="text-muted">Filter bills introduced on or before this date</small>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Ministry</label>
                         <select name="ministry" class="form-control">
                             <option value="">All Ministries</option>
                             {% for m in ministries %}
@@ -30,49 +51,120 @@
                         </select>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label>Party</label>
-                        <select name="party" class="form-control">
-                            <option value="">All Parties</option>
-                            {% for p in parties %}
-                            <option value="{{ p }}">{{ p }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label>House</label>
+                        <label class="form-label">House</label>
                         <select name="house" class="form-control">
                             <option value="all">All Houses</option>
                             <option value="LOK_SABHA">Lok Sabha</option>
                             <option value="RAJYA_SABHA">Rajya Sabha</option>
-                            <option value="BOTH">Both</option>
+                            <option value="BOTH">Both Houses</option>
                         </select>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label>Status</label>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Status</label>
                         <select name="status" class="form-control">
                             <option value="all">All Status</option>
                             <option value="PASSED">Passed</option>
                             <option value="PENDING">Pending</option>
                             <option value="REJECTED">Rejected</option>
                             <option value="WITHDRAWN">Withdrawn</option>
+                            <option value="LAPSED">Lapsed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Year</label>
+                        <select name="year" class="form-control">
+                            <option value="">All Years</option>
+                            {% for year in years %}
+                            <option value="{{ year }}">{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3" id="state-filter-container" style="display: none;">
+                        <label class="form-label">State (for State Bills)</label>
+                        <select name="state" class="form-control">
+                            <option value="">All States</option>
+                            {% for state in states %}
+                            <option value="{{ state }}">{{ state }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>
+                
                 <div class="row">
                     <div class="col-12">
-                        <label>Format</label>
+                        <label class="form-label fw-bold">Export Format</label>
                         <div class="btn-group d-flex" role="group">
-                            <button type="submit" name="format" value="csv" class="btn btn-outline-success flex-fill">CSV</button>
-                            <button type="submit" name="format" value="json" class="btn btn-outline-info flex-fill">JSON</button>
-                            <button type="submit" name="format" value="xlsx" class="btn btn-outline-primary flex-fill">Excel</button>
-                            <button type="submit" name="format" value="pdf" class="btn btn-outline-danger flex-fill">PDF</button>
+                            <button type="submit" name="format" value="csv" class="btn btn-outline-success flex-fill">
+                                <i class="fas fa-file-csv"></i> CSV
+                            </button>
+                            <button type="submit" name="format" value="xlsx" class="btn btn-outline-primary flex-fill">
+                                <i class="fas fa-file-excel"></i> Excel
+                            </button>
+                            <button type="submit" name="format" value="pdf" class="btn btn-outline-danger flex-fill">
+                                <i class="fas fa-file-pdf"></i> PDF
+                            </button>
                         </div>
                     </div>
                 </div>
             </form>
         </div>
     </div>
+    
+    <div class="card mt-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-info-circle"></i> Export Information</h5>
+        </div>
+        <div class="card-body">
+            <p>The exported file will contain the following columns:</p>
+            <ul class="list-inline">
+                <li class="list-inline-item"><span class="badge bg-secondary">Bill ID</span></li>
+                <li class="list-inline-item"><span class="badge bg-secondary">Title</span></li>
+                <li class="list-inline-item"><span class="badge bg-secondary">House</span></li>
+                <li class="list-inline-item"><span class="badge bg-secondary">Status</span></li>
+                <li class="list-inline-item"><span class="badge bg-secondary">Introduction Date</span></li>
+                <li class="list-inline-item"><span class="badge bg-secondary">Passed in LS</span></li>
+                <li class="list-inline-item"><span class="badge bg-secondary">Passed in RS</span></li>
+                <li class="list-inline-item"><span class="badge bg-secondary">Ministry</span></li>
+                <li class="list-inline-item"><span class="badge bg-secondary">State</span></li>
+                <li class="list-inline-item"><span class="badge bg-secondary">Source</span></li>
+            </ul>
+            <p class="text-muted small mb-0"><i class="fas fa-info-circle"></i> Note: Bill Number, Introduced By, and Party columns have been removed from the export.</p>
+        </div>
+    </div>
 </div>
+
+<script>
+// Show/hide state filter based on bill type selection
+document.querySelectorAll('input[name="bill_type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const stateFilter = document.getElementById('state-filter-container');
+        if (this.value === 'state') {
+            stateFilter.style.display = 'block';
+        } else {
+            stateFilter.style.display = 'none';
+        }
+    });
+});
+
+// Auto-submit when format button is clicked
+document.querySelectorAll('button[name="format"]').forEach(button => {
+    button.addEventListener('click', function(e) {
+        const form = document.getElementById('download-form');
+        // Remove any existing format input
+        const existingFormat = form.querySelector('input[name="format"]');
+        if (existingFormat) {
+            existingFormat.remove();
+        }
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = 'format';
+        hiddenInput.value = this.value;
+        form.appendChild(hiddenInput);
+        form.submit();
+    });
+});
+</script>
 {% endblock %}

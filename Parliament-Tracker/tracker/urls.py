@@ -12,7 +12,7 @@ urlpatterns = [
     path('api/bills/', views.api_bills, name='api_bills'),
     # download
     path('download/', views.download_page, name='download_page'),
-    path('download/download/', views.download_bills, name='download_bills'),
+    path('download/bills/', views.download_bills, name='download_bills'),
     #mp's mla's
     path('mps/', views.mp_list, name='mp_list'),
     path('mps/<int:pk>/', views.mp_detail, name='mp_detail'),

@@ -347,173 +347,262 @@ def calendar_view(request):
 # -------------------------------------------------------------------
 def api_bills(request):
     from django.utils import timezone
-
+    from django.db import models
+    
     bills = Bill.objects.all().order_by('-introduction_date')
+    
+    # Apply filters
     house = request.GET.get('house')
     if house and house != 'all':
         bills = bills.filter(house=house)
+    
     status = request.GET.get('status')
     if status and status != 'all':
         bills = bills.filter(status=status)
+    
     search = request.GET.get('search')
     if search:
         bills = bills.filter(
             models.Q(title__icontains=search) |
             models.Q(bill_id__icontains=search)
         )
+    
+    # Source filter
+    source = request.GET.get('source')
+    if source:
+        bills = bills.filter(source=source)
+    
     date = request.GET.get('date')
     if date:
         bills = bills.filter(introduction_date=date)
+    
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     if start_date and end_date:
         bills = bills.filter(introduction_date__gte=start_date, introduction_date__lte=end_date)
+    
     limit = int(request.GET.get('limit', 500))
     bills = bills[:limit]
-
+    
     today = timezone.now().date()
-    data = [{
-        'id': str(bill.id),
-        'bill_id': bill.bill_id,
-        'bill_number': bill.bill_number or '',
-        'title': bill.title,
-        'house': bill.house,
-        'status': bill.status,
-        'introduction_date': bill.introduction_date.isoformat() if bill.introduction_date else None,
-        'introduced_by': bill.introduced_by or '',
-        'ministry': bill.ministry or '',
-        'url': f"/bills/{bill.id}/",
-        'is_upcoming': bill.introduction_date > today if bill.introduction_date else False,
-    } for bill in bills]
+    
+    data = []
+    for bill in bills:
+        if not bill.introduction_date:
+            continue
+        
+        # CRITICAL: Properly set source field
+        bill_source = bill.source or 'MPA'  # Default to 'MPA' if not set
+        bill_state = bill.state or ''
+        
+        data.append({
+            'id': str(bill.id),
+            'bill_id': bill.bill_id,
+            'bill_number': bill.bill_number or '',
+            'title': bill.title,
+            'house': bill.house,
+            'status': bill.status,
+            'introduction_date': bill.introduction_date.isoformat() if bill.introduction_date else None,
+            'introduced_by': bill.introduced_by or '',
+            'ministry': bill.ministry or '',
+            'source': bill_source,  # This is the key field
+            'state': bill_state,
+            'passed_in_ls_date': bill.passed_in_ls_date.isoformat() if bill.passed_in_ls_date else None,
+            'passed_in_rs_date': bill.passed_in_rs_date.isoformat() if bill.passed_in_rs_date else None,
+            'url': f"/bills/{bill.id}/",
+            'is_upcoming': bill.introduction_date > today if bill.introduction_date else False,
+        })
+    
     return JsonResponse({'bills': data, 'count': len(data), 'total': Bill.objects.count()})
 
 # -------------------------------------------------------------------
 # download
 # -------------------------------------------------------------------
+# tracker/views.py - Updated download functions
+
 def download_page(request):
-    ministries = Bill.objects.exclude(ministry__isnull=True).exclude(ministry='')\
+    """Download page with filter options"""
+    from tracker.models import Bill
+    
+    # Get unique values for filters
+    ministries = Bill.objects.exclude(ministry__isnull=True).exclude(ministry='') \
                      .values_list('ministry', flat=True).distinct().order_by('ministry')
-    parties = Bill.objects.exclude(introduced_by_party__isnull=True).exclude(introduced_by_party='')\
-                  .values_list('introduced_by_party', flat=True).distinct().order_by('introduced_by_party')
-    years = Bill.objects.exclude(introduction_date__isnull=True).dates('introduction_date', 'year')
-    years_list = [y.year for y in years]
-    return render(request, 'tracker/download.html', {
+    
+    # Get years from introduction_date
+    years = Bill.objects.filter(introduction_date__isnull=False) \
+               .dates('introduction_date', 'year') \
+               .values_list('introduction_date__year', flat=True).distinct().order_by('-introduction_date__year')
+    
+    # Get unique states for state bills filter
+    states = Bill.objects.filter(source='STATE_BILL', state__isnull=False).exclude(state='') \
+                .values_list('state', flat=True).distinct().order_by('state')
+    
+    context = {
         'ministries': ministries,
-        'parties': parties,
-        'years': years_list,
-    })
+        'years': list(years),
+        'states': states,
+    }
+    return render(request, 'tracker/download.html', context)
 
 
 def download_bills(request):
-    from django.db import models
-
-    bills = Bill.objects.all().order_by('-introduction_date')
+    """Export bills based on filters - Removed JSON, unwanted columns"""
+    from django.http import HttpResponse
+    from django.db.models import Q
+    import csv
+    from datetime import datetime
+    import io
+    
+    # Get bill type filter (central or state)
+    bill_type = request.GET.get('bill_type', 'all')
+    
+    # Base queryset
+    if bill_type == 'central':
+        bills = Bill.objects.filter(source='MPA').order_by('-introduction_date')
+    elif bill_type == 'state':
+        bills = Bill.objects.filter(source='STATE_BILL').order_by('-introduction_date')
+    else:
+        bills = Bill.objects.all().order_by('-introduction_date')
+    
+    # Apply filters
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     ministry = request.GET.get('ministry')
-    party = request.GET.get('party')
     house = request.GET.get('house')
     status = request.GET.get('status')
-
+    year = request.GET.get('year')
+    state = request.GET.get('state')
+    
     if start_date:
         bills = bills.filter(introduction_date__gte=start_date)
     if end_date:
         bills = bills.filter(introduction_date__lte=end_date)
     if ministry:
-        bills = bills.filter(ministry=ministry)
-    if party:
-        bills = bills.filter(introduced_by_party=party)
+        bills = bills.filter(ministry__icontains=ministry)
     if house and house != 'all':
         bills = bills.filter(house=house)
     if status and status != 'all':
         bills = bills.filter(status=status)
-
+    if year:
+        bills = bills.filter(introduction_date__year=year)
+    if state and bill_type == 'state':
+        bills = bills.filter(state__icontains=state)
+    
+    # Prepare data for export - REMOVED: bill_number, introduced_by, introduced_by_party
     data = []
     for bill in bills:
         data.append({
-            'bill_id': bill.bill_id,
-            'bill_number': bill.bill_number or '',
-            'title': bill.title,
-            'house': bill.get_house_display() if hasattr(bill, 'get_house_display') else bill.house,
-            'status': bill.get_status_display() if hasattr(bill, 'get_status_display') else bill.status,
-            'introduced_by': bill.introduced_by or '',
-            'introduced_by_party': bill.introduced_by_party or '',
-            'introduction_date': bill.introduction_date.strftime('%d %b %Y') if bill.introduction_date else '',
-            'ministry': bill.ministry or '',
-            'state': bill.state or '',
-            'source': bill.source or '',
+            'Bill ID': bill.bill_id,
+            'Title': bill.title,
+            'House': bill.get_house_display() if hasattr(bill, 'get_house_display') else bill.house,
+            'Status': bill.get_status_display() if hasattr(bill, 'get_status_display') else bill.status,
+            'Introduction Date': bill.introduction_date.strftime('%d %b %Y') if bill.introduction_date else '',
+            'Passed in LS': bill.passed_in_ls_date.strftime('%d %b %Y') if bill.passed_in_ls_date else 'Pending',
+            'Passed in RS': bill.passed_in_rs_date.strftime('%d %b %Y') if bill.passed_in_rs_date else 'Pending',
+            'Ministry': bill.ministry or '',
+            'State': bill.state or 'Central',
+            'Source': bill.source or '',
         })
-
+    
+    # Get export format
     fmt = request.GET.get('format', 'csv')
+    
     if fmt == 'csv':
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="bills.csv"'
+        response['Content-Disposition'] = 'attachment; filename="bills_export.csv"'
+        
         if data:
             writer = csv.DictWriter(response, fieldnames=data[0].keys())
             writer.writeheader()
             writer.writerows(data)
         return response
-    elif fmt == 'json':
-        return JsonResponse(data, safe=False)
+        
     elif fmt == 'xlsx':
-        wb = Workbook()
-        ws = wb.active
-        ws.title = "Bills"
-        if data:
-            headers = list(data[0].keys())
-            for col, header in enumerate(headers, 1):
-                cell = ws.cell(row=1, column=col, value=header.replace('_', ' ').title())
-                cell.font = Font(bold=True)
-                cell.alignment = Alignment(horizontal='center')
-            for row, bill in enumerate(data, 2):
-                for col, key in enumerate(headers, 1):
-                    ws.cell(row=row, column=col, value=bill[key])
-            for col in ws.columns:
-                max_len = 0
-                col_letter = col[0].column_letter
-                for cell in col:
-                    try:
-                        if len(str(cell.value)) > max_len:
-                            max_len = len(str(cell.value))
-                    except:
-                        pass
-                ws.column_dimensions[col_letter].width = min(max_len + 2, 50)
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename="bills.xlsx"'
-        wb.save(response)
-        return response
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, Alignment
+            
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Bills"
+            
+            if data:
+                headers = list(data[0].keys())
+                for col, header in enumerate(headers, 1):
+                    cell = ws.cell(row=1, column=col, value=header)
+                    cell.font = Font(bold=True)
+                    cell.alignment = Alignment(horizontal='center')
+                
+                for row, bill in enumerate(data, 2):
+                    for col, key in enumerate(headers, 1):
+                        ws.cell(row=row, column=col, value=bill[key])
+                
+                # Auto-adjust column widths
+                for col in ws.columns:
+                    max_length = 0
+                    col_letter = col[0].column_letter
+                    for cell in col:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except:
+                            pass
+                    adjusted_width = min(max_length + 2, 50)
+                    ws.column_dimensions[col_letter].width = adjusted_width
+            
+            response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = 'attachment; filename="bills_export.xlsx"'
+            wb.save(response)
+            return response
+            
+        except ImportError:
+            return HttpResponse("Excel export requires openpyxl. Install with: pip install openpyxl", status=500)
+        
     elif fmt == 'pdf':
-        buffer = io.BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=landscape(letter))
-        elements = []
-        styles = getSampleStyleSheet()
-        title = Paragraph("Bills Download", styles['Title'])
-        elements.append(title)
-        if data:
-            headers = list(data[0].keys())
-            table_data = [headers] + [[bill[h] for h in headers] for bill in data]
-            table = Table(table_data, repeatRows=1)
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ]))
-            elements.append(table)
-        doc.build(elements)
-        pdf = buffer.getvalue()
-        buffer.close()
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="bills.pdf"'
-        response.write(pdf)
-        return response
-    else:
-        return HttpResponse("Invalid format", status=400)
-
+        try:
+            from reportlab.lib.pagesizes import landscape, letter
+            from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+            from reportlab.lib.styles import getSampleStyleSheet
+            from reportlab.lib import colors
+            
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=landscape(letter))
+            elements = []
+            styles = getSampleStyleSheet()
+            
+            title = Paragraph("Bills Export Report", styles['Title'])
+            elements.append(title)
+            
+            if data:
+                headers = list(data[0].keys())
+                table_data = [headers] + [[bill[h] for h in headers] for bill in data]
+                
+                table = Table(table_data, repeatRows=1)
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                ]))
+                elements.append(table)
+            
+            doc.build(elements)
+            pdf = buffer.getvalue()
+            buffer.close()
+            
+            response = HttpResponse(content_type='application/pdf')
+            response['Content-Disposition'] = 'attachment; filename="bills_export.pdf"'
+            response.write(pdf)
+            return response
+            
+        except ImportError:
+            return HttpResponse("PDF export requires reportlab. Install with: pip install reportlab", status=500)
+    
+    return HttpResponse("Invalid format", status=400)
 # -------------------------------------------------------------------
 # Scrape trigger (if you have it)
 # -------------------------------------------------------------------

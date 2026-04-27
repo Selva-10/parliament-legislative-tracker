@@ -12,39 +12,21 @@
         background: white;
         padding: 20px;
         border-radius: 8px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        min-height: 500px;
     }
     .fc-event {
         cursor: pointer;
         border-radius: 4px;
         padding: 2px 4px;
-        font-size: 0.85rem;
+        font-size: 0.75rem;
+        border: none !important;
+        color: white !important;
     }
-    .upcoming-event {
-        border: 2px dashed #007bff !important;
-        background-color: rgba(0,123,255,0.1) !important;
+    .central-event {
+        background-color: #1a237e !important;
     }
-    .fc-daygrid-day-number {
-        font-weight: 500;
-        color: #1a237e;
-    }
-    .fc-day-today {
-        background-color: #e8eaf6 !important;
-    }
-    .calendar-filters {
-        background: white;
-        padding: 20px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        display: flex;
-        gap: 15px;
-        align-items: flex-end;
-        flex-wrap: wrap;
-    }
-    .filter-group {
-        flex: 1;
-        min-width: 200px;
+    .state-event {
+        background-color: #28a745 !important;
     }
     .stats-row {
         display: flex;
@@ -54,52 +36,96 @@
     }
     .stat-card {
         flex: 1;
-        min-width: 120px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-width: 150px;
+        background: #1a237e;
         color: white;
         border-radius: 8px;
         padding: 15px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        text-align: center;
     }
-    .stat-card.passed { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); }
-    .stat-card.pending { background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); }
-    .stat-card.rejected { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); }
-    .stat-number { font-size: 2rem; font-weight: bold; line-height: 1.2; }
-    .stat-label { font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; }
-    .day-bill-list {
-        max-height: 400px;
-        overflow-y: auto;
+    .stat-card.state { background: #28a745; }
+    .stat-number { font-size: 1.8rem; font-weight: bold; }
+    .filter-bar {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: center;
     }
-    .day-bill-item {
-        padding: 12px;
-        border-bottom: 1px solid #eee;
+    select, button {
+        padding: 8px 15px;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+    }
+    .btn-primary {
+        background: #1a237e;
+        color: white;
+        border: none;
         cursor: pointer;
-        transition: background-color 0.2s;
-        margin-bottom: 5px;
+    }
+    .legend {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        margin-bottom: 15px;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    .legend-color.blue { background-color: #1a237e; }
+    .legend-color.green { background-color: #28a745; }
+    .view-buttons {
+        display: flex;
+        gap: 10px;
+        margin-left: auto;
+    }
+    .view-btn {
+        padding: 6px 12px;
+        border: 1px solid #ddd;
+        background: white;
+        cursor: pointer;
         border-radius: 4px;
     }
-    .day-bill-item:hover {
-        background-color: #f5f5f5;
+    .view-btn.active {
+        background: #1a237e;
+        color: white;
+        border-color: #1a237e;
     }
-    .day-bill-item.success { border-left: 4px solid #28a745; }
-    .day-bill-item.warning { border-left: 4px solid #ffc107; background-color: #fff3cd; }
-    .day-bill-item.danger { border-left: 4px solid #dc3545; }
-    .day-bill-item.secondary { border-left: 4px solid #6c757d; }
-    .day-bill-item.upcoming { border-left: 4px solid #007bff; background-color: #e6f2ff; }
-    .badge-success { background-color: #28a745; color: white; padding: 3px 8px; border-radius: 4px; }
-    .badge-warning { background-color: #ffc107; color: #212529; padding: 3px 8px; border-radius: 4px; }
-    .badge-danger { background-color: #dc3545; color: white; padding: 3px 8px; border-radius: 4px; }
-    .badge-secondary { background-color: #6c757d; color: white; padding: 3px 8px; border-radius: 4px; }
-    .badge-info { background-color: #17a2b8; color: white; padding: 3px 8px; border-radius: 4px; }
-    .loading-text {
-        text-align: center;
-        padding: 20px;
-        color: #666;
+    .fc-header-toolbar {
+        margin-bottom: 20px !important;
     }
-    .fc-daygrid-more-link {
-        cursor: pointer;
-        color: #1a237e !important;
-        font-weight: 500 !important;
+    .fc-toolbar-title {
+        font-size: 1.2rem !important;
+        font-weight: 600 !important;
+    }
+    /* Hide time slots in week view */
+    .fc-timegrid-slot {
+        display: none !important;
+    }
+    .fc-timegrid-slot-label {
+        display: none !important;
+    }
+    .fc-timegrid-slot-minor {
+        display: none !important;
+    }
+    .fc-timegrid-col-events {
+        margin-top: 0 !important;
+    }
+    .fc-timegrid-event {
+        min-height: 30px !important;
+    }
+    .fc-timegrid .fc-daygrid-day-frame {
+        min-height: 80px !important;
     }
 </style>
 {% endblock %}
@@ -108,64 +134,40 @@
 <div class="container-fluid">
     <h1 class="h3 mb-4">Bills Calendar</h1>
 
-    <!-- Statistics Cards -->
+    <div class="legend">
+        <div><span class="legend-color blue"></span> 🏛️ Central Bills (MPA)</div>
+        <div><span class="legend-color green"></span> 🏢 State Bills</div>
+        <div class="view-buttons">
+            <button class="view-btn" data-view="dayGridMonth">📅 Month</button>
+            <button class="view-btn" data-view="timeGridWeek">📆 Week</button>
+        </div>
+    </div>
+
     <div class="stats-row">
         <div class="stat-card">
-            <div class="stat-number">{{ total_bills }}</div>
-            <div class="stat-label">Total Bills</div>
+            <div class="stat-number" id="centralCount">0</div>
+            <div>Central Bills</div>
         </div>
-        <div class="stat-card passed">
-            <div class="stat-number">{{ passed_count }}</div>
-            <div class="stat-label">Passed</div>
-        </div>
-        <div class="stat-card pending">
-            <div class="stat-number">{{ pending_count }}</div>
-            <div class="stat-label">Pending</div>
-        </div>
-        <div class="stat-card rejected">
-            <div class="stat-number">{{ rejected_count }}</div>
-            <div class="stat-label">Rejected/Withdrawn</div>
+        <div class="stat-card state">
+            <div class="stat-number" id="stateCount">0</div>
+            <div>State Bills</div>
         </div>
     </div>
 
-    <!-- Filters -->
-    <div class="calendar-filters">
-        <div class="filter-group">
-            <label class="form-label">Status</label>
-            <select class="form-control" id="status-filter">
-                <option value="all">All Status</option>
-                <option value="PASSED">Passed</option>
-                <option value="PENDING">Pending</option>
-                <option value="REJECTED">Rejected</option>
-                <option value="WITHDRAWN">Withdrawn</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label class="form-label">House</label>
-            <select class="form-control" id="house-filter">
-                <option value="all">All Houses</option>
-                <option value="LOK_SABHA">Lok Sabha</option>
-                <option value="RAJYA_SABHA">Rajya Sabha</option>
-                <option value="BOTH">Both</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label class="form-label">Type</label>
-            <select class="form-control" id="type-filter">
-                <option value="all">All Bills</option>
-                <option value="upcoming">Upcoming</option>
-                <option value="past">Past</option>
-            </select>
-        </div>
-        <div>
-            <button class="btn btn-primary" id="apply-filters">Apply Filters</button>
-            <a href="?format=ical" class="btn btn-success" id="download-ical">
-                <i class="bi bi-calendar-plus"></i> Download iCal
-            </a>
-        </div>
+    <div class="filter-bar">
+        <select id="billType">
+            <option value="all">📋 All Bills</option>
+            <option value="central">🏛️ Central Bills Only</option>
+            <option value="state">🏢 State Bills Only</option>
+        </select>
+        <select id="statusFilter">
+            <option value="all">📊 All Status</option>
+            <option value="PASSED">✅ Passed</option>
+            <option value="PENDING">⏳ Pending</option>
+        </select>
+        <button id="refreshBtn" class="btn-primary">🔄 Refresh</button>
     </div>
 
-    <!-- Calendar -->
     <div class="card">
         <div class="card-body">
             <div id="calendar"></div>
@@ -173,300 +175,112 @@
     </div>
 </div>
 
-<!-- Day View Modal -->
-<div class="modal fade" id="dayModal" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="dayModalTitle">Bills for </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div id="day-bill-list" class="day-bill-list"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Bill Details Modal -->
-<div class="modal fade" id="billModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="modalTitle">Bill Details</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="modalBody">
-                Loading...
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <a href="#" id="modalViewLink" class="btn btn-primary" target="_blank">View Full Details</a>
-            </div>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const calendarEl = document.getElementById('calendar');
-    let calendar;
-    let allEvents = [];
-
-    function getStatusColor(status) {
-        switch(status) {
-            case 'PASSED': return '#28a745';
-            case 'PENDING': return '#ffc107';
-            case 'REJECTED': return '#dc3545';
-            case 'WITHDRAWN': return '#6c757d';
-            default: return '#17a2b8';
-        }
-    }
-
-    function getStatusClass(status) {
-        switch(status) {
-            case 'PASSED': return 'success';
-            case 'PENDING': return 'warning';
-            case 'REJECTED': return 'danger';
-            case 'WITHDRAWN': return 'secondary';
-            default: return 'secondary';
-        }
-    }
-
-    function formatDate(dateStr) {
-        if (!dateStr) return null;
-        try {
-            const parts = dateStr.split('-');
-            if (parts.length === 3) {
-                const year = parseInt(parts[0]);
-                const month = parseInt(parts[1]) - 1;
-                const day = parseInt(parts[2]);
-                const date = new Date(year, month, day);
-                return date.toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                });
-            }
-            return dateStr;
-        } catch (e) {
-            console.error('Error formatting date:', e);
-            return null;
-        }
-    }
-
-    function showBillDetails(billId) {
-        const bill = allEvents.find(e => e.id == billId);
-        if (!bill) return;
-
-        const modalEl = document.getElementById('billModal');
-        const statusClass = getStatusClass(bill.extendedProps.status);
-        const badgeClass = `badge-${statusClass}`;
-        const isUpcoming = bill.extendedProps.is_upcoming;
-
-        document.getElementById('modalTitle').textContent = bill.extendedProps.bill_id;
-        document.getElementById('modalBody').innerHTML = `
-            <div class="row">
-                <div class="col-md-12">
-                    <h5>${bill.extendedProps.title}</h5>
-                    <hr>
-                    <table class="table table-bordered">
-                        <tr><th>Bill Number:</th><td>${bill.extendedProps.bill_number || '-'}</td></tr>
-                        <tr><th>House:</th><td>${bill.extendedProps.house ? bill.extendedProps.house.replace('_', ' ') : 'Unknown'}</td></tr>
-                        <tr><th>Status:</th><td><span class="${badgeClass}">${bill.extendedProps.status || 'Unknown'}${isUpcoming ? ' (Upcoming)' : ''}</span></td></tr>
-                        <tr><th>Introduced:</th><td>${bill.extendedProps.introduction_date ? formatDate(bill.extendedProps.introduction_date) : '-'}</td></tr>
-                        <tr><th>Introduced By:</th><td>${bill.extendedProps.introduced_by || '-'}</td></tr>
-                        <tr><th>Ministry:</th><td>${bill.extendedProps.ministry || '-'}</td></tr>
-                    </table>
-                </div>
-            </div>
-        `;
-        document.getElementById('modalViewLink').href = `/bills/${bill.extendedProps.id}/`;
-
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
-    }
-
-    // Function to load events for a specific date range
-    function loadEventsForDateRange(startDate, endDate) {
-        const status = document.getElementById('status-filter').value;
-        const house = document.getElementById('house-filter').value;
-        const type = document.getElementById('type-filter').value;
-
-        // Show loading indicator on calendar
-        calendarEl.style.opacity = '0.5';
+(function() {
+    let calendar = null;
+    let currentView = 'dayGridMonth';
+    
+    function loadCalendar() {
+        const billType = document.getElementById('billType').value;
+        const status = document.getElementById('statusFilter').value;
         
-        // Build URL with date range
-        let url = `/api/bills/?limit=2000`;
-        if (status !== 'all') {
-            url += `&status=${status}`;
-        }
-        if (house !== 'all') {
-            url += `&house=${house}`;
-        }
-        if (startDate && endDate) {
-            url += `&start_date=${startDate}&end_date=${endDate}`;
-        }
-
+        let url = '/api/bills/?limit=5000';
+        if (billType === 'central') url += '&source=MPA';
+        if (billType === 'state') url += '&source=STATE_BILL';
+        if (status !== 'all') url += `&status=${status}`;
+        
         fetch(url)
-            .then(response => response.json())
+            .then(res => res.json())
             .then(data => {
-                let filteredBills = data.bills.filter(bill => bill.introduction_date);
+                const bills = data.bills || [];
+                let centralCount = 0, stateCount = 0;
+                const events = [];
                 
-                // Apply type filter
-                const today = new Date().toISOString().split('T')[0];
-                if (type === 'upcoming') {
-                    filteredBills = filteredBills.filter(bill => bill.introduction_date > today);
-                } else if (type === 'past') {
-                    filteredBills = filteredBills.filter(bill => bill.introduction_date <= today);
-                }
-
-                allEvents = filteredBills.map(bill => ({
-                    id: bill.id,
-                    title: bill.title.length > 50 ? bill.title.substring(0, 47) + '...' : bill.title,
-                    start: bill.introduction_date,
-                    extendedProps: bill,
-                    color: getStatusColor(bill.status),
-                    className: bill.is_upcoming ? 'upcoming-event' : '',
-                }));
-
-                // Clear and add events to calendar
-                calendar.removeAllEvents();
-                calendar.addEventSource(allEvents);
-                calendarEl.style.opacity = '1';
-            })
-            .catch(error => {
-                console.error('Error loading events:', error);
-                calendarEl.style.opacity = '1';
-            });
-    }
-
-    // Initialize calendar
-    calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,dayGridWeek'
-        },
-        events: [], // Start empty, we'll load dynamically
-        eventClick: function(info) {
-            info.jsEvent.preventDefault();
-            showBillDetails(info.event.id);
-        },
-        eventDidMount: function(info) {
-            info.el.setAttribute('title', info.event.title);
-        },
-        dayMaxEventRows: 3,
-        dayMaxEvents: 3,
-        moreLinkClick: function(info) {
-            info.jsEvent.preventDefault();
-            
-            // Get the date from the cell
-            const clickedDate = info.date.toISOString().split('T')[0];
-            const eventsOnDate = allEvents.filter(event => {
-                if (!event.start) return false;
-                const eventDate = event.start.split('T')[0];
-                return eventDate === clickedDate;
-            });
-            
-            // Show modal with bills for that day
-            const modalEl = document.getElementById('dayModal');
-            const formattedDate = formatDate(clickedDate);
-            document.getElementById('dayModalTitle').textContent = `Bills for ${formattedDate}`;
-            
-            const modalBody = document.getElementById('day-bill-list');
-            modalBody.innerHTML = '';
-            
-            if (eventsOnDate.length > 0) {
-                eventsOnDate.forEach(event => {
-                    const status = event.extendedProps.status || 'PENDING';
-                    const statusClass = getStatusClass(status);
-                    const badgeClass = `badge-${statusClass}`;
+                bills.forEach(bill => {
+                    if (!bill.introduction_date) return;
                     
-                    const itemDiv = document.createElement('div');
-                    itemDiv.className = `day-bill-item ${statusClass}`;
-                    itemDiv.onclick = function() {
-                        const modal = bootstrap.Modal.getInstance(modalEl);
-                        modal.hide();
-                        showBillDetails(event.id);
-                    };
-                    itemDiv.innerHTML = `
-                        <strong>${event.title}</strong><br>
-                        <small>
-                            Status: <span class="${badgeClass}">${status}</span> |
-                            House: ${event.extendedProps.house ? event.extendedProps.house.replace('_', ' ') : 'Unknown'}
-                        </small>
-                    `;
-                    modalBody.appendChild(itemDiv);
+                    if (bill.source === 'MPA') centralCount++;
+                    else if (bill.source === 'STATE_BILL') stateCount++;
+                    
+                    events.push({
+                        id: bill.id,
+                        title: bill.title.length > 40 ? bill.title.substring(0, 37) + '...' : bill.title,
+                        start: bill.introduction_date,
+                        className: bill.source === 'MPA' ? 'central-event' : bill.source === 'STATE_BILL' ? 'state-event' : '',
+                        extendedProps: bill
+                    });
                 });
-            } else {
-                modalBody.innerHTML = '<p class="text-center text-muted py-4">No bills on this day</p>';
+                
+                document.getElementById('centralCount').innerText = centralCount;
+                document.getElementById('stateCount').innerText = stateCount;
+                
+                if (calendar) calendar.destroy();
+                
+                calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+                    initialView: currentView,
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: ''
+                    },
+                    buttonText: {
+                        today: 'Today',
+                        prev: '◀',
+                        next: '▶'
+                    },
+                    views: {
+                        dayGridMonth: {
+                            buttonText: 'Month',
+                            displayEventTime: false
+                        },
+                        timeGridWeek: {
+                            buttonText: 'Week',
+                            displayEventTime: false,
+                            displayEventEnd: false,
+                            slotDuration: '24:00:00',
+                            allDaySlot: true,
+                            slotMinTime: '00:00:00',
+                            slotMaxTime: '24:00:00'
+                        }
+                    },
+                    events: events,
+                    eventClick: function(info) {
+                        const bill = info.event.extendedProps;
+                        const isCentral = bill.source === 'MPA';
+                        alert(`📋 BILL DETAILS\n\nTitle: ${bill.title}\nType: ${isCentral ? '🏛️ Central Bill' : '🏢 State Bill'}\nStatus: ${bill.status}\nDate: ${bill.introduction_date}\n${isCentral ? 'House: ' + bill.house : 'State: ' + (bill.state || 'N/A')}`);
+                    },
+                    height: 550,
+                    stickyHeaderDates: true
+                });
+                
+                calendar.render();
+                
+                document.querySelectorAll('.view-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.dataset.view === currentView) {
+                        btn.classList.add('active');
+                    }
+                });
+            })
+            .catch(err => console.error('Error:', err));
+    }
+    
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentView = this.dataset.view;
+            if (calendar) {
+                calendar.destroy();
+                loadCalendar();
             }
-            
-            const modal = new bootstrap.Modal(modalEl);
-            modal.show();
-        },
-        // KEY FIX: This runs whenever the user navigates to a different month/week
-        datesSet: function(info) {
-            const startDate = info.start.toISOString().split('T')[0];
-            const endDate = info.end.toISOString().split('T')[0];
-            console.log(`Loading events from ${startDate} to ${endDate}`); // Debug log
-            loadEventsForDateRange(startDate, endDate);
-        }
+        });
     });
     
-    calendar.render();
+    document.getElementById('refreshBtn').onclick = loadCalendar;
+    document.getElementById('billType').onchange = loadCalendar;
+    document.getElementById('statusFilter').onchange = loadCalendar;
     
-    // Initial load - get events for the current visible range
-    const initialStart = calendar.view.activeStart.toISOString().split('T')[0];
-    const initialEnd = calendar.view.activeEnd.toISOString().split('T')[0];
-    loadEventsForDateRange(initialStart, initialEnd);
-
-    // Apply filters button
-    document.getElementById('apply-filters').addEventListener('click', function() {
-        const startDate = calendar.view.activeStart.toISOString().split('T')[0];
-        const endDate = calendar.view.activeEnd.toISOString().split('T')[0];
-        loadEventsForDateRange(startDate, endDate);
-    });
-    
-    // Auto-refresh when dropdowns change
-    document.getElementById('status-filter').addEventListener('change', function() {
-        const startDate = calendar.view.activeStart.toISOString().split('T')[0];
-        const endDate = calendar.view.activeEnd.toISOString().split('T')[0];
-        loadEventsForDateRange(startDate, endDate);
-    });
-    
-    document.getElementById('house-filter').addEventListener('change', function() {
-        const startDate = calendar.view.activeStart.toISOString().split('T')[0];
-        const endDate = calendar.view.activeEnd.toISOString().split('T')[0];
-        loadEventsForDateRange(startDate, endDate);
-    });
-    
-    document.getElementById('type-filter').addEventListener('change', function() {
-        const startDate = calendar.view.activeStart.toISOString().split('T')[0];
-        const endDate = calendar.view.activeEnd.toISOString().split('T')[0];
-        loadEventsForDateRange(startDate, endDate);
-    });
-
-    // Download iCal with current filters
-    document.getElementById('download-ical').addEventListener('click', function(e) {
-        e.preventDefault();
-        const status = document.getElementById('status-filter').value;
-        const house = document.getElementById('house-filter').value;
-        const url = new URL(window.location.href);
-        url.searchParams.set('status', status === 'all' ? '' : status);
-        url.searchParams.set('house', house === 'all' ? '' : house);
-        url.searchParams.set('format', 'ical');
-        window.location.href = url.toString();
-    });
-});
+    loadCalendar();
+})();
 </script>
 {% endblock %}

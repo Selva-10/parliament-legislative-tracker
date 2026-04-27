@@ -26,12 +26,14 @@
                             <table class="table table-bordered">
                                 <tr>
                                     <th style="width: 40%">Bill ID</th>
-                                    <td>{{ bill.bill_id }}</td>
+                                    <td>{{ bill.bill_id }}</a>
                                 </tr>
+                                {% if bill.bill_number and bill.bill_number != '' %}
                                 <tr>
                                     <th>Bill Number</th>
-                                    <td>{{ bill.bill_number|default:"-" }}</td>
+                                    <td>{{ bill.bill_number }}</a>
                                 </tr>
+                                {% endif %}
                                 <tr>
                                     <th>Bill Type</th>
                                     <td>
@@ -40,44 +42,49 @@
                                         {% else %}
                                             <span class="badge bg-secondary">Government Bill</span>
                                         {% endif %}
-                                    </td>
+                                    </a>
                                 </tr>
                                 <tr>
                                     <th>House</th>
-                                    <td>{{ bill.get_house_display|default:bill.house }}</td>
+                                    <td>{{ bill.get_house_display|default:bill.house }}</a>
                                 </tr>
+                                {% if bill.originating_house and bill.originating_house != '' %}
                                 <tr>
                                     <th>Originating House</th>
-                                    <td>{{ bill.get_originating_house_display|default:"-" }}</td>
+                                    <td>{{ bill.get_originating_house_display|default:bill.originating_house }}</a>
                                 </tr>
+                                {% endif %}
                                 <tr>
                                     <th>Ministry</th>
-                                    <td>{{ bill.ministry|default:"-" }}</td>
+                                    <td>{{ bill.ministry|default:"-" }}</a>
                                 </tr>
+                                {% if bill.state and bill.state != '' %}
                                 <tr>
                                     <th>State</th>
-                                    <td>{{ bill.state|default:"-" }}</td>
+                                    <td>{{ bill.state }}</a>
                                 </tr>
+                                {% endif %}
                             </table>
                         </div>
                         <div class="col-md-6">
                             <table class="table table-bordered">
-                               
                                 <tr>
-                                    <th>Introduction Date</th>
-                                    <td><strong>{{ bill.introduction_date|date:"d F Y"|default:"-" }}</strong></td>
+                                    <th style="width: 40%">Introduction Date</th>
+                                    <td><strong>{{ bill.introduction_date|date:"d F Y"|default:"-" }}</strong></a>
                                 </tr>
+                                {% if bill.legislative_year and bill.legislative_year != '' %}
                                 <tr>
                                     <th>Legislative Year</th>
-                                    <td>{{ bill.legislative_year|default:"-" }}</td>
+                                    <td>{{ bill.legislative_year|default:"-" }}</a>
                                 </tr>
+                                {% endif %}
                                 <tr>
                                     <th>Source</th>
-                                    <td>{{ bill.source|default:"-" }}</td>
+                                    <td>{{ bill.source|default:"-" }}</a>
                                 </tr>
                                 <tr>
                                     <th>Last Updated</th>
-                                    <td>{{ bill.last_updated|date:"d M Y H:i"|default:"-" }}</td>
+                                    <td>{{ bill.last_updated|date:"d M Y H:i"|default:"-" }}</a>
                                 </tr>
                                 <tr>
                                     <th>Status</th>
@@ -85,7 +92,7 @@
                                         <span class="badge bg-{{ bill.status_color }} fs-6">
                                             {{ bill.get_status_display|default:bill.status }}
                                         </span>
-                                    </td>
+                                    </a>
                                 </tr>
                             </table>
                         </div>
@@ -101,7 +108,6 @@
                     </h3>
                 </div>
                 <div class="card-body">
-                    <!-- Timeline -->
                     <div class="timeline">
                         <!-- Introduction -->
                         <div class="timeline-item d-flex mb-4">
@@ -248,7 +254,7 @@
                 </div>
             </div>
 
-            <!-- Description & Objective -->
+            <!-- Description -->
             {% if bill.description %}
             <div class="card mb-4">
                 <div class="card-header bg-primary text-white">
@@ -258,19 +264,6 @@
                 </div>
                 <div class="card-body">
                     <p>{{ bill.description|linebreaks }}</p>
-                </div>
-            </div>
-            {% endif %}
-
-            {% if bill.objective %}
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="h5 mb-0">
-                        <i class="bi bi-bullseye"></i> Objective
-                    </h3>
-                </div>
-                <div class="card-body">
-                    <p>{{ bill.objective|linebreaks }}</p>
                 </div>
             </div>
             {% endif %}
@@ -295,7 +288,7 @@
                             <span>Lok Sabha:</span>
                             <strong>
                                 {% if bill.passed_in_ls_date %}
-                                    <span class="text-success">✓ Passed</span>
+                                    <span class="text-success">✓ Passed on {{ bill.passed_in_ls_date|date:"d M Y" }}</span>
                                 {% else %}
                                     <span class="text-warning">Pending</span>
                                 {% endif %}
@@ -305,22 +298,20 @@
                             <span>Rajya Sabha:</span>
                             <strong>
                                 {% if bill.passed_in_rs_date %}
-                                    <span class="text-success">✓ Passed</span>
+                                    <span class="text-success">✓ Passed on {{ bill.passed_in_rs_date|date:"d M Y" }}</span>
                                 {% else %}
                                     <span class="text-warning">Pending</span>
                                 {% endif %}
                             </strong>
                         </div>
+                        {% if bill.assent_date %}
                         <div class="d-flex justify-content-between mb-2">
                             <span>Presidential Assent:</span>
                             <strong>
-                                {% if bill.assent_date %}
-                                    <span class="text-success">✓ Received</span>
-                                {% else %}
-                                    <span class="text-secondary">Pending</span>
-                                {% endif %}
+                                <span class="text-success">✓ Received on {{ bill.assent_date|date:"d M Y" }}</span>
                             </strong>
                         </div>
+                        {% endif %}
                         {% if bill.referred_to_committee %}
                         <div class="d-flex justify-content-between">
                             <span>Committee:</span>
@@ -368,18 +359,12 @@
                             <td class="text-end"><strong>{{ bill.assent_date|date:"d M Y" }}</strong></td>
                         </tr>
                         {% endif %}
-                        {% if bill.gazette_notification_date %}
-                        <tr>
-                            <td><i class="bi bi-newspaper"></i> Gazette:</td>
-                            <td class="text-end"><strong>{{ bill.gazette_notification_date|date:"d M Y" }}</strong></td>
-                        </tr>
-                        {% endif %}
                     </table>
                 </div>
             </div>
 
             <!-- Links Card -->
-            {% if bill.prs_link or bill.loksabha_link or bill.rajyasabha_link or bill.bill_url or bill.pdf_link %}
+            {% if bill.prs_link or bill.loksabha_link or bill.rajyasabha_link %}
             <div class="card mb-4">
                 <div class="card-header bg-secondary text-white">
                     <h5 class="mb-0">Related Links</h5>
@@ -401,31 +386,7 @@
                             <i class="bi bi-university"></i> Rajya Sabha
                         </a>
                         {% endif %}
-                        {% if bill.bill_url %}
-                        <a href="{{ bill.bill_url }}" target="_blank" class="btn btn-outline-success btn-sm">
-                            <i class="bi bi-link-45deg"></i> Official Bill Page
-                        </a>
-                        {% endif %}
-                        {% if bill.pdf_link %}
-                        <a href="{{ bill.pdf_link }}" target="_blank" class="btn btn-outline-danger btn-sm">
-                            <i class="bi bi-file-pdf"></i> Download PDF
-                        </a>
-                        {% endif %}
                     </div>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Tags Card -->
-            {% if bill.tags %}
-            <div class="card mb-4">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="mb-0">Tags</h5>
-                </div>
-                <div class="card-body">
-                    {% for tag in bill.tags %}
-                    <span class="badge bg-secondary me-1 mb-1">{{ tag }}</span>
-                    {% endfor %}
                 </div>
             </div>
             {% endif %}
