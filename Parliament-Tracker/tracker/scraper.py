@@ -7,6 +7,7 @@ from django.utils import timezone
 from .models import Bill
 import re
 import time
+import hashlib
 
 logger = logging.getLogger(__name__)
 
@@ -68,10 +69,13 @@ class RealBillScraper:
 
     def scrape_mpa_bills(self):
         """
-        Scrape ALL MPA bills with ALL 6 columns including LS/RS passed dates
+        Scrape ALL MPA bills - NO STATUS CALCULATION
+        Status will be updated by PRS status updater
+        House defaults to LOK_SABHA
         """
         logger.info("=" * 60)
-        logger.info("Scraping MPA Bills - COMPLETE DATA (6 Columns)")
+        logger.info("Scraping MPA Bills - Raw Data Only")
+        logger.info("Status will be updated by PRS status updater")
         logger.info("=" * 60)
         
         bills = []
@@ -91,34 +95,17 @@ class RealBillScraper:
                 return []
             
             rows = table.find_all('tr')
-            total_rows = len(rows) - 1  # Subtract header row
+            total_rows = len(rows) - 1
             logger.info(f"Found {total_rows} total bills in MPA table")
-            
-            # Get headers for debugging
-            header_row = rows[0] if rows else None
-            if header_row:
-                headers = [th.get_text(strip=True) for th in header_row.find_all(['th', 'td'])]
-                logger.info(f"Table columns: {headers}")
             
             valid_count = 0
             skipped_count = 0
-            passed_ls_count = 0
-            passed_rs_count = 0
-            passed_both_count = 0
             
-            # Process each data row (skip header row)
             for idx, row in enumerate(rows[1:], 1):
                 try:
                     cols = row.find_all('td')
                     
-                    # MPA has 6 columns:
-                    # Col 0: S.No
-                    # Col 1: Title of the Bill
-                    # Col 2: Ministry/Department
-                    # Col 3: Introduced in LS/RS (Introduction Date)
-                    # Col 4: Passed in LS (Lok Sabha passed date)
-                    # Col 5: Passed in RS (Rajya Sabha passed date)
-                    
+                    # MPA has 6 columns
                     if len(cols) < 4:
                         logger.debug(f"Row {idx}: Only {len(cols)} columns, skipping")
                         skipped_count += 1
@@ -150,30 +137,12 @@ class RealBillScraper:
                         skipped_count += 1
                         continue
                     
-                    # Count bills with passed dates
-                    if passed_ls_date:
-                        passed_ls_count += 1
-                    if passed_rs_date:
-                        passed_rs_count += 1
-                    if passed_ls_date and passed_rs_date:
-                        passed_both_count += 1
+                    # Generate consistent bill_id from title
+                    bill_id = f"MPA-{hashlib.md5(title.encode()).hexdigest()[:8].upper()}"
                     
-                    # Determine status based on passed dates
-                    if passed_ls_date and passed_rs_date:
-                        status = 'PASSED'
-                        house = 'BOTH'
-                    elif passed_ls_date:
-                        status = 'PASSED'
-                        house = 'LOK_SABHA'
-                    elif passed_rs_date:
-                        status = 'PASSED'
-                        house = 'RAJYA_SABHA'
-                    else:
-                        status = 'PENDING'
-                        house = 'LOK_SABHA'
-                    
-                    # Generate unique bill ID using index
-                    bill_id = f"MPA-{idx:04d}"
+                    # NO STATUS CALCULATION HERE
+                    # Status will be updated by PRS status updater
+                    # Default to 'PENDING' until PRS updates it
                     
                     bill_data = {
                         'bill_id': bill_id,
@@ -184,35 +153,28 @@ class RealBillScraper:
                         'passed_in_rs_date': passed_rs_date,
                         'ministry': ministry,
                         'source': 'MPA',
-                        'house': house,
-                        'status': status,
-                        'introduced_by': '',
-                        'introduced_by_party': '',
-                        'description': '',
-                        'prs_link': '',
+                        'house': 'LOK_SABHA',  # Default, will be updated by PRS house updater
+                        'status': 'PENDING',   # Default, will be updated by PRS status updater
                     }
                     
                     bills.append(bill_data)
                     valid_count += 1
                     
-                    # Log progress for bills with passed dates
-                    if passed_ls_date or passed_rs_date:
-                        logger.info(f"  ✓ [{idx}] {title[:40]} | Intro: {intro_date} | LS: {passed_ls_date} | RS: {passed_rs_date}")
-                    elif valid_count % 20 == 0:
-                        logger.info(f"  ✓ Processed {valid_count} bills...")
+                    if valid_count % 20 == 0:
+                        logger.info(f"  Processed {valid_count} bills...")
                     
                 except Exception as e:
                     logger.error(f"Error on row {idx}: {e}")
                     skipped_count += 1
                     continue
             
-            logger.info(f"\n📊 MPA Scraping Summary:")
-            logger.info(f"  ✓ Bills with valid dates: {valid_count}")
-            logger.info(f"  ✗ Skipped (no valid date): {skipped_count}")
-            logger.info(f"\n📅 Passed Dates Summary:")
-            logger.info(f"  ✓ Passed in Lok Sabha: {passed_ls_count}")
-            logger.info(f"  ✓ Passed in Rajya Sabha: {passed_rs_count}")
-            logger.info(f"  ✓ Passed in Both Houses: {passed_both_count}")
+            logger.info(f"\nMPA Scraping Summary:")
+            logger.info(f"  Total bills scraped: {valid_count}")
+            logger.info(f"  Skipped: {skipped_count}")
+            logger.info(f"  Bills with LS passed date: {sum(1 for b in bills if b['passed_in_ls_date'])}")
+            logger.info(f"  Bills with RS passed date: {sum(1 for b in bills if b['passed_in_rs_date'])}")
+            logger.info(f"  Status set to: PENDING (will be updated by PRS)")
+            logger.info(f"  House set to: LOK_SABHA (will be updated by PRS)")
             
             return bills
             
@@ -220,68 +182,55 @@ class RealBillScraper:
             logger.error(f"MPA scrape error: {e}")
             return []
 
-    def scrape_all(self):
-        """
-        Main scraping method - saves ALL MPA bills with ALL columns
-        """
-        logger.info("=" * 60)
-        logger.info("STARTING COMPLETE BILL SCRAPER")
-        logger.info("=" * 60)
+    def save_bills_to_db(self, bills):
+        """Save scraped bills to database without duplicates"""
+        from .models import Bill
         
-        all_bills = self.scrape_mpa_bills()
+        saved_count = 0
+        updated_count = 0
         
-        if not all_bills:
-            logger.warning("No bills fetched from MPA")
-            return {'created': 0, 'updated': 0, 'failed': 0}
-        
-        results = {'created': 0, 'updated': 0, 'failed': 0}
-        
-        for bill_data in all_bills:
+        for bill_data in bills:
             try:
                 obj, created = Bill.objects.update_or_create(
                     bill_id=bill_data.get('bill_id'),
                     defaults={
-                        'bill_number': bill_data.get('bill_number', ''),
                         'title': bill_data.get('title', ''),
-                        'house': bill_data.get('house', 'LOK_SABHA'),
-                        'status': bill_data.get('status', 'PENDING'),
+                        'bill_number': bill_data.get('bill_number', ''),
                         'introduction_date': bill_data.get('introduction_date'),
                         'passed_in_ls_date': bill_data.get('passed_in_ls_date'),
                         'passed_in_rs_date': bill_data.get('passed_in_rs_date'),
                         'ministry': bill_data.get('ministry', ''),
-                        'introduced_by': bill_data.get('introduced_by', ''),
-                        'introduced_by_party': bill_data.get('introduced_by_party', ''),
-                        'description': bill_data.get('description', ''),
-                        'source': bill_data.get('source', 'MPA'),
-                        'prs_link': bill_data.get('prs_link', ''),
+                        'source': 'MPA',
+                        'house': 'LOK_SABHA',  # Default, will be updated by PRS house updater
+                        'status': 'PENDING',   # Default, will be updated by PRS status updater
                         'last_updated': timezone.now(),
                     }
                 )
                 
                 if created:
-                    results['created'] += 1
+                    saved_count += 1
                 else:
-                    results['updated'] += 1
+                    updated_count += 1
                     
             except Exception as e:
-                logger.error(f"Save error for {bill_data.get('bill_id')}: {e}")
-                results['failed'] += 1
+                logger.error(f"Save error: {e}")
         
-        # Final statistics
-        total = Bill.objects.count()
-        with_ls = Bill.objects.filter(passed_in_ls_date__isnull=False).count()
-        with_rs = Bill.objects.filter(passed_in_rs_date__isnull=False).count()
-        with_both = Bill.objects.filter(passed_in_ls_date__isnull=False, passed_in_rs_date__isnull=False).count()
+        logger.info(f"Saved: {saved_count} new, Updated: {updated_count} existing")
+        logger.info("NOTE: Status and House are set to defaults. Run PRS updaters to correct them.")
+        return saved_count + updated_count
+
+    def scrape_and_save(self):
+        """Main method to scrape and save MPA bills"""
+        bills = self.scrape_mpa_bills()
         
-        logger.info("=" * 60)
-        logger.info("FINAL SCRAPING RESULTS:")
-        logger.info(f"  - Total bills in DB: {total}")
-        logger.info(f"  - Newly created: {results['created']}")
-        logger.info(f"  - Updated: {results['updated']}")
-        logger.info(f"  - Failed: {results['failed']}")
-        logger.info(f"  - Passed in Lok Sabha: {with_ls}")
-        logger.info(f"  - Passed in Rajya Sabha: {with_rs}")
-        logger.info(f"  - Passed in Both Houses: {with_both}")
-        logger.info("=" * 60)
+        if not bills:
+            logger.warning("No bills scraped")
+            return 0
         
-        return results
+        return self.save_bills_to_db(bills)
+
+
+# Helper function for management command
+def scrape_mpa_bills():
+    scraper = RealBillScraper()
+    return scraper.scrape_and_save()

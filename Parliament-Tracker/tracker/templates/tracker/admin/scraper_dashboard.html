@@ -1,0 +1,124 @@
+{% extends 'admin/base_site.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>🤖 Auto-Scraper Dashboard</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Total Bills</h5>
+                    <h2 class="display-4">{{ total_bills }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Today's Bills</h5>
+                    <h2 class="display-4">{{ today_bills }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Scraper Status</h5>
+                    <h4>{{ status.running|yesno:"🟢 Running,🔴 Stopped" }}</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Last Run</h5>
+                    <h6>{{ status.last_run|default:"Never" }}</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Manual Scrape Control</h3>
+        </div>
+        <div class="card-body">
+            <button id="scrape-now" class="btn btn-primary btn-lg">
+                🔄 Scrape Now
+            </button>
+            <div id="scrape-result" class="mt-3" style="display: none;"></div>
+        </div>
+    </div>
+    
+    <div class="card mt-4">
+        <div class="card-header">
+            <h3>Schedule Information</h3>
+        </div>
+        <div class="card-body">
+            <ul>
+                <li>✅ Every 6 hours (automatic)</li>
+                <li>✅ Daily at 6:00 AM</li>
+                <li>✅ Daily at 12:00 PM</li>
+                <li>✅ Daily at 6:00 PM</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('scrape-now').addEventListener('click', function() {
+    const btn = this;
+    const resultDiv = document.getElementById('scrape-result');
+    
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Scraping in progress...';
+    resultDiv.style.display = 'block';
+    resultDiv.innerHTML = '<div class="alert alert-info">Starting scrape...</div>';
+    
+    fetch('/admin/scraper/trigger/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    ✅ Scrape completed!<br>
+                    MPA: ${data.results.mpa} bills<br>
+                    PRS: ${data.results.prs} bills
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = '<div class="alert alert-danger">Scrape failed</div>';
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = `<div class="alert alert-danger">Error: ${error}</div>`;
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '🔄 Scrape Now';
+    });
+});
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

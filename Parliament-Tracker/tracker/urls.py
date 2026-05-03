@@ -23,4 +23,5 @@ urlpatterns = [
     path('api/state-bills/<str:state_name>/', views.api_state_bills, name='api_state_bills'),
     path('api/bill/<str:bill_id>/', views.api_bill_detail, name='api_bill_detail'),
     path('state-bills/<str:state_name>/', views.state_bills_list, name='state_bills_list'),
+     
 ]

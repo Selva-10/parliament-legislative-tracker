@@ -22,11 +22,15 @@
         border: none !important;
         color: white !important;
     }
-    .central-event {
-        background-color: #1a237e !important;
-    }
-    .state-event {
+    .passed-event {
         background-color: #28a745 !important;
+    }
+    .pending-event {
+        background-color: #ffc107 !important;
+        color: #333 !important;
+    }
+    .other-event {
+        background-color: #6c757d !important;
     }
     .stats-row {
         display: flex;
@@ -43,8 +47,10 @@
         padding: 15px;
         text-align: center;
     }
-    .stat-card.state { background: #28a745; }
-    .stat-number { font-size: 1.8rem; font-weight: bold; }
+    .stat-number {
+        font-size: 1.8rem;
+        font-weight: bold;
+    }
     .filter-bar {
         background: white;
         padding: 15px;
@@ -82,8 +88,10 @@
         display: inline-block;
         margin-right: 5px;
     }
-    .legend-color.blue { background-color: #1a237e; }
-    .legend-color.green { background-color: #28a745; }
+    .legend-color.passed { background-color: #28a745; }
+    .legend-color.pending { background-color: #ffc107; }
+    .legend-color.other { background-color: #6c757d; }
+    .legend-color.mpa { background-color: #1a237e; }
     .view-buttons {
         display: flex;
         gap: 10px;
@@ -108,25 +116,6 @@
         font-size: 1.2rem !important;
         font-weight: 600 !important;
     }
-    /* Hide time slots in week view */
-    .fc-timegrid-slot {
-        display: none !important;
-    }
-    .fc-timegrid-slot-label {
-        display: none !important;
-    }
-    .fc-timegrid-slot-minor {
-        display: none !important;
-    }
-    .fc-timegrid-col-events {
-        margin-top: 0 !important;
-    }
-    .fc-timegrid-event {
-        min-height: 30px !important;
-    }
-    .fc-timegrid .fc-daygrid-day-frame {
-        min-height: 80px !important;
-    }
 </style>
 {% endblock %}
 
@@ -135,8 +124,10 @@
     <h1 class="h3 mb-4">Bills Calendar</h1>
 
     <div class="legend">
-        <div><span class="legend-color blue"></span> 🏛️ Central Bills (MPA)</div>
-        <div><span class="legend-color green"></span> 🏢 State Bills</div>
+        <div><span class="legend-color passed"></span> ✅ Passed Bills</div>
+        <div><span class="legend-color pending"></span> ⏳ Pending Bills</div>
+        <div><span class="legend-color other"></span> 📋 Other Status</div>
+        <div><span class="legend-color mpa"></span> 🏛️ MPA Bills Only</div>
         <div class="view-buttons">
             <button class="view-btn" data-view="dayGridMonth">📅 Month</button>
             <button class="view-btn" data-view="timeGridWeek">📆 Week</button>
@@ -145,25 +136,27 @@
 
     <div class="stats-row">
         <div class="stat-card">
-            <div class="stat-number" id="centralCount">0</div>
-            <div>Central Bills</div>
+            <div class="stat-number" id="totalCount">0</div>
+            <div>Total MPA Bills</div>
         </div>
-        <div class="stat-card state">
-            <div class="stat-number" id="stateCount">0</div>
-            <div>State Bills</div>
+        <div class="stat-card" style="background: #28a745;">
+            <div class="stat-number" id="passedCount">0</div>
+            <div>Passed Bills</div>
+        </div>
+        <div class="stat-card" style="background: #ffc107; color: #333;">
+            <div class="stat-number" id="pendingCount">0</div>
+            <div>Pending Bills</div>
         </div>
     </div>
 
     <div class="filter-bar">
-        <select id="billType">
-            <option value="all">📋 All Bills</option>
-            <option value="central">🏛️ Central Bills Only</option>
-            <option value="state">🏢 State Bills Only</option>
-        </select>
         <select id="statusFilter">
             <option value="all">📊 All Status</option>
             <option value="PASSED">✅ Passed</option>
             <option value="PENDING">⏳ Pending</option>
+            <option value="WITHDRAWN">📤 Withdrawn</option>
+            <option value="REJECTED">❌ Rejected</option>
+            <option value="LAPSED">⌛ Lapsed</option>
         </select>
         <button id="refreshBtn" class="btn-primary">🔄 Refresh</button>
     </div>
@@ -182,38 +175,53 @@
     let currentView = 'dayGridMonth';
     
     function loadCalendar() {
-        const billType = document.getElementById('billType').value;
         const status = document.getElementById('statusFilter').value;
         
-        let url = '/api/bills/?limit=5000';
-        if (billType === 'central') url += '&source=MPA';
-        if (billType === 'state') url += '&source=STATE_BILL';
+        // Show ONLY MPA bills (source=MPA)
+        let url = '/api/bills/?source=MPA&limit=5000';
         if (status !== 'all') url += `&status=${status}`;
         
         fetch(url)
             .then(res => res.json())
             .then(data => {
                 const bills = data.bills || [];
-                let centralCount = 0, stateCount = 0;
+                let totalCount = 0;
+                let passedCount = 0;
+                let pendingCount = 0;
                 const events = [];
                 
                 bills.forEach(bill => {
                     if (!bill.introduction_date) return;
                     
-                    if (bill.source === 'MPA') centralCount++;
-                    else if (bill.source === 'STATE_BILL') stateCount++;
+                    totalCount++;
+                    
+                    if (bill.status === 'PASSED') passedCount++;
+                    if (bill.status === 'PENDING') pendingCount++;
+                    
+                    let color = '#6c757d';
+                    let className = 'other-event';
+                    
+                    if (bill.status === 'PASSED') {
+                        color = '#28a745';
+                        className = 'passed-event';
+                    } else if (bill.status === 'PENDING') {
+                        color = '#ffc107';
+                        className = 'pending-event';
+                    }
                     
                     events.push({
                         id: bill.id,
                         title: bill.title.length > 40 ? bill.title.substring(0, 37) + '...' : bill.title,
                         start: bill.introduction_date,
-                        className: bill.source === 'MPA' ? 'central-event' : bill.source === 'STATE_BILL' ? 'state-event' : '',
+                        color: color,
+                        className: className,
                         extendedProps: bill
                     });
                 });
                 
-                document.getElementById('centralCount').innerText = centralCount;
-                document.getElementById('stateCount').innerText = stateCount;
+                document.getElementById('totalCount').innerText = totalCount;
+                document.getElementById('passedCount').innerText = passedCount;
+                document.getElementById('pendingCount').innerText = pendingCount;
                 
                 if (calendar) calendar.destroy();
                 
@@ -237,18 +245,13 @@
                         timeGridWeek: {
                             buttonText: 'Week',
                             displayEventTime: false,
-                            displayEventEnd: false,
-                            slotDuration: '24:00:00',
-                            allDaySlot: true,
-                            slotMinTime: '00:00:00',
-                            slotMaxTime: '24:00:00'
+                            displayEventEnd: false
                         }
                     },
                     events: events,
                     eventClick: function(info) {
                         const bill = info.event.extendedProps;
-                        const isCentral = bill.source === 'MPA';
-                        alert(`📋 BILL DETAILS\n\nTitle: ${bill.title}\nType: ${isCentral ? '🏛️ Central Bill' : '🏢 State Bill'}\nStatus: ${bill.status}\nDate: ${bill.introduction_date}\n${isCentral ? 'House: ' + bill.house : 'State: ' + (bill.state || 'N/A')}`);
+                        alert(`📋 BILL DETAILS\n\nTitle: ${bill.title}\nStatus: ${bill.status}\nHouse: ${bill.house}\nIntroduced: ${bill.introduction_date}\nMinistry: ${bill.ministry || 'N/A'}`);
                     },
                     height: 550,
                     stickyHeaderDates: true
@@ -277,7 +280,6 @@
     });
     
     document.getElementById('refreshBtn').onclick = loadCalendar;
-    document.getElementById('billType').onchange = loadCalendar;
     document.getElementById('statusFilter').onchange = loadCalendar;
     
     loadCalendar();

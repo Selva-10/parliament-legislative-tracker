@@ -28,21 +28,25 @@ from .models import Bill, State, Party, MP, MLA
 # -------------------------------------------------------------------
 # Dashboard
 # -------------------------------------------------------------------
+# tracker/views.py - Update DashboardView
+
 class DashboardView(TemplateView):
     template_name = 'tracker/dashboard.html'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Bills
-        context['total_bills'] = Bill.objects.count()
-        context['pending_bills'] = Bill.objects.filter(status='PENDING').count()
-        context['passed_bills'] = Bill.objects.filter(status='PASSED').count()
-        context['rejected_bills'] = Bill.objects.filter(status='REJECTED').count()
-        context['loksabha_bills'] = Bill.objects.filter(house='LOK_SABHA').count()
-        context['rajyasabha_bills'] = Bill.objects.filter(house='RAJYA_SABHA').count()
-        context['recent_bills'] = Bill.objects.order_by('-introduction_date')[:10]
+        
+        # SHOW ONLY MPA BILLS (not state bills)
+        mpa_bills = Bill.objects.filter(source='MPA')
+        
+        context['total_bills'] = mpa_bills.count()
+        context['pending_bills'] = mpa_bills.filter(status='PENDING').count()
+        context['passed_bills'] = mpa_bills.filter(status='PASSED').count()
+        context['rejected_bills'] = mpa_bills.filter(status='REJECTED').count()
+        context['loksabha_bills'] = mpa_bills.filter(house='LOK_SABHA').count()
+        context['rajyasabha_bills'] = mpa_bills.filter(house='RAJYA_SABHA').count()
+        context['recent_bills'] = mpa_bills.order_by('-introduction_date')[:10]
 
-        # MPs & MLAs
         context['total_mps'] = MP.objects.count()
         context['total_mlas'] = MLA.objects.count()
         context['recent_mps'] = MP.objects.select_related('state', 'party').order_by('-id')[:5]
@@ -54,7 +58,8 @@ class DashboardView(TemplateView):
 # -------------------------------------------------------------------
 def bill_list(request):
     bills = Bill.objects.all().order_by('-introduction_date')
-
+     # Show ONLY MPA bills
+    bills = Bill.objects.filter(source='MPA').order_by('-introduction_date')
     search_query = request.GET.get('search', '')
     if search_query:
         bills = bills.filter(
@@ -314,10 +319,17 @@ def map_view(request):
 # -------------------------------------------------------------------
 # Calendar
 # -------------------------------------------------------------------
+# tracker/views.py - Update calendar_view
+
+# tracker/views.py - Update calendar_view
+
 def calendar_view(request):
     year = request.GET.get('year')
     month = request.GET.get('month')
-    bills = Bill.objects.exclude(introduction_date__isnull=True)
+    
+    # Show ONLY MPA bills (exclude state bills)
+    bills = Bill.objects.filter(source='MPA').exclude(introduction_date__isnull=True)
+    
     if year and month:
         bills = bills.filter(introduction_date__year=year, introduction_date__month=month)
 
@@ -328,17 +340,17 @@ def calendar_view(request):
                 'title': f"{bill.bill_id}: {bill.title[:30]}",
                 'start': bill.introduction_date.isoformat(),
                 'url': f"/bills/{bill.id}/",
-                'color': '#28a745' if bill.status == 'PASSED' else '#ffc107' if bill.status == 'PENDING' else '#dc3545'
+                'color': '#1a237e' if bill.status == 'PASSED' else '#ffc107' if bill.status == 'PENDING' else '#dc3545'
             })
 
     context = {
         'events': json.dumps(events),
         'year': year,
         'month': month,
-        'total_bills': Bill.objects.count(),
-        'passed_count': Bill.objects.filter(status='PASSED').count(),
-        'pending_count': Bill.objects.filter(status='PENDING').count(),
-        'rejected_count': Bill.objects.filter(status='REJECTED').count() + Bill.objects.filter(status='WITHDRAWN').count(),
+        'total_bills': Bill.objects.filter(source='MPA').count(),
+        'passed_count': Bill.objects.filter(source='MPA', status='PASSED').count(),
+        'pending_count': Bill.objects.filter(source='MPA', status='PENDING').count(),
+        'rejected_count': Bill.objects.filter(source='MPA', status='REJECTED').count() + Bill.objects.filter(source='MPA', status='WITHDRAWN').count(),
     }
     return render(request, 'tracker/calendar.html', context)
 
@@ -368,6 +380,9 @@ def api_bills(request):
         )
     
     # Source filter
+    # Show ONLY MPA bills for calendar
+    bills = Bill.objects.filter(source='MPA').order_by('-introduction_date')
+    
     source = request.GET.get('source')
     if source:
         bills = bills.filter(source=source)

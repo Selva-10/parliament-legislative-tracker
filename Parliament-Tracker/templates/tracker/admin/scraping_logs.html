@@ -1,0 +1,11 @@
+﻿{% extends 'admin/base_site.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>📋 Scraping Logs</h1>
+    <div class="alert alert-info">
+        Scraping logs will appear here once scraping runs.
+    </div>
+    <a href="{% url 'scraper_dashboard' %}" class="btn btn-primary">Back to Dashboard</a>
+</div>
+{% endblock %}
